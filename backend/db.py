@@ -5,7 +5,12 @@ operation, which is safe across FastAPI's worker threads.
 Timestamps are stored as UTC ISO-8601 strings so they sort and compare correctly.
 """
 
+# Lazy annotations: the `list` method below would otherwise shadow the builtin
+# inside the class body (e.g. in `-> list[HourlyBucket]`).
+from __future__ import annotations
+
 import json
+import math
 import sqlite3
 from contextlib import contextmanager
 from datetime import datetime, timezone
@@ -18,7 +23,9 @@ from backend.models.record import (
     DetectionRecordCreate,
     HistoryPage,
     HistoryQuery,
+    TimeRange,
 )
+from backend.models.stats import HourlyBucket, HourlyQuery, SummaryStats
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS detections (
@@ -115,10 +122,79 @@ class DetectionRepository:
             row = conn.execute("SELECT * FROM detections WHERE id = ?", (record_id,)).fetchone()
         return self._row_to_record(row) if row else None
 
+    # --- statistics ---------------------------------------------------------
+
+    def summary(self, q: TimeRange | None = None) -> SummaryStats:
+        """Aggregate counts, confidence and timing over the (filtered) history."""
+        where, params = self._build_where(q or TimeRange())
+        with self._connect() as conn:
+            row = conn.execute(
+                f"""SELECT
+                        COUNT(*)                                   AS total_detections,
+                        COALESCE(SUM(count > 0), 0)                AS frames_with_people,
+                        COALESCE(SUM(count), 0)                    AS total_people,
+                        AVG(count)                                 AS avg_people,
+                        MAX(count)                                 AS max_people,
+                        -- per-person mean: weight each frame's average by its count
+                        SUM(avg_confidence * count)
+                          / NULLIF(SUM(CASE WHEN avg_confidence IS NOT NULL THEN count END), 0)
+                                                                   AS avg_confidence,
+                        AVG(inference_ms)                          AS avg_inference_ms,
+                        MAX(inference_ms)                          AS max_inference_ms,
+                        AVG(total_ms)                              AS avg_total_ms,
+                        MIN(timestamp)                             AS first_timestamp,
+                        MAX(timestamp)                             AS last_timestamp
+                    FROM detections {where}""",
+                params,
+            ).fetchone()
+            data = dict(row)
+            n = data["total_detections"]
+            data["p50_inference_ms"] = self._percentile(conn, "inference_ms", 0.50, n, where, params)
+            data["p95_inference_ms"] = self._percentile(conn, "inference_ms", 0.95, n, where, params)
+
+        for key in ("avg_people", "avg_confidence", "avg_inference_ms", "max_inference_ms",
+                    "avg_total_ms", "p50_inference_ms", "p95_inference_ms"):
+            if data[key] is not None:
+                data[key] = round(data[key], 4 if key == "avg_confidence" else 2)
+        return SummaryStats(**data)
+
+    def hourly(self, q: HourlyQuery) -> list[HourlyBucket]:
+        """Group detections into hourly buckets (calendar hours or hour-of-day)."""
+        where, params = self._build_where(q)
+        fmt = "%Y-%m-%dT%H:00" if q.mode == "timeline" else "%H"
+        shift = f"{q.tz_offset_minutes:+d} minutes"  # SQLite date modifier
+        with self._connect() as conn:
+            rows = conn.execute(
+                f"""SELECT strftime(?, timestamp, ?)  AS hour,
+                           COUNT(*)                   AS detections,
+                           ROUND(AVG(count), 2)       AS avg_people,
+                           MAX(count)                 AS max_people,
+                           ROUND(SUM(avg_confidence * count)
+                             / NULLIF(SUM(CASE WHEN avg_confidence IS NOT NULL THEN count END), 0), 4)
+                                                      AS avg_confidence
+                    FROM detections {where}
+                    GROUP BY hour ORDER BY hour""",
+                [fmt, shift, *params],
+            ).fetchall()
+        return [HourlyBucket(**dict(r)) for r in rows]
+
     # --- helpers ------------------------------------------------------------
 
     @staticmethod
-    def _build_where(q: HistoryQuery) -> tuple[str, list]:
+    def _percentile(conn, column: str, p: float, n: int, where: str, params: list) -> float | None:
+        """Nearest-rank percentile computed in SQL (no need to load all rows)."""
+        if n == 0:
+            return None
+        offset = max(math.ceil(p * n) - 1, 0)
+        row = conn.execute(
+            f"SELECT {column} FROM detections {where} ORDER BY {column} LIMIT 1 OFFSET ?",
+            [*params, offset],
+        ).fetchone()
+        return row[0]
+
+    @staticmethod
+    def _build_where(q: TimeRange) -> tuple[str, list]:
+        """WHERE clause from a TimeRange (and HistoryQuery's extra filters, if present)."""
         clauses, params = [], []
         if q.start is not None:
             clauses.append("timestamp >= ?")
@@ -126,13 +202,15 @@ class DetectionRepository:
         if q.end is not None:
             clauses.append("timestamp <= ?")
             params.append(_to_utc_iso(q.end))
-        if q.min_confidence is not None:
+        min_confidence = getattr(q, "min_confidence", None)
+        if min_confidence is not None:
             # Records with no people (NULL avg) are excluded by a confidence filter
             clauses.append("avg_confidence >= ?")
-            params.append(q.min_confidence)
-        if q.min_count is not None:
+            params.append(min_confidence)
+        min_count = getattr(q, "min_count", None)
+        if min_count is not None:
             clauses.append("count >= ?")
-            params.append(q.min_count)
+            params.append(min_count)
         return ("WHERE " + " AND ".join(clauses)) if clauses else "", params
 
     @staticmethod

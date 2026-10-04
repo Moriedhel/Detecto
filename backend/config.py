@@ -47,6 +47,7 @@ class Settings(BaseSettings):
     # --- Server ---
     cors_origins: list[str] = ["http://localhost:5173"]  # Vite dev server
     log_level: str = "INFO"
+    log_file: Path | None = BACKEND_DIR / "data" / "detecto.log"  # empty to disable
 
     @field_validator("conf_threshold", "iou_threshold")
     @classmethod
@@ -55,11 +56,16 @@ class Settings(BaseSettings):
             raise ValueError("must be between 0 and 1")
         return v
 
-    @field_validator("db_path", "weights_dir")
+    @field_validator("log_file", mode="before")
     @classmethod
-    def _resolve_path(cls, v: Path) -> Path:
+    def _empty_means_none(cls, v):
+        return None if v == "" else v
+
+    @field_validator("db_path", "weights_dir", "log_file")
+    @classmethod
+    def _resolve_path(cls, v: Path | None) -> Path | None:
         # Relative paths are resolved against the project root
-        return v if v.is_absolute() else ROOT_DIR / v
+        return v if v is None or v.is_absolute() else ROOT_DIR / v
 
     @property
     def max_upload_bytes(self) -> int:

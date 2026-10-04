@@ -7,6 +7,7 @@ Run from the project root:
 import logging
 import time
 from contextlib import asynccontextmanager
+from logging.handlers import RotatingFileHandler
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -14,17 +15,23 @@ from fastapi.responses import JSONResponse
 
 from backend.config import get_settings
 from backend.db import get_repository
-from backend.routes import detect
+from backend.routes import detect, history, stats
 from backend.services.detector import get_detector
 from backend.utils.preprocessing import ImageError
 
 settings = get_settings()
 
-logging.basicConfig(
-    level=settings.log_level.upper(),
-    format="%(asctime)s %(levelname)-7s %(name)s: %(message)s",
-)
+LOG_FORMAT = "%(asctime)s %(levelname)-7s %(name)s: %(message)s"
+logging.basicConfig(level=settings.log_level.upper(), format=LOG_FORMAT)
 logger = logging.getLogger("detecto")
+
+# Persist performance logs (per-request timings, per-detection results) to a rotating file
+if settings.log_file and not any(isinstance(h, RotatingFileHandler) for h in logger.handlers):
+    settings.log_file.parent.mkdir(parents=True, exist_ok=True)
+    _file_handler = RotatingFileHandler(settings.log_file, maxBytes=2_000_000, backupCount=3,
+                                        encoding="utf-8")
+    _file_handler.setFormatter(logging.Formatter(LOG_FORMAT))
+    logger.addHandler(_file_handler)  # child loggers (detecto.*) propagate here
 
 
 @asynccontextmanager
@@ -34,6 +41,7 @@ async def lifespan(app: FastAPI):
     app.state.repository = get_repository()
     logger.info("History database: %s", settings.db_path)
     app.state.detector = get_detector()
+    app.state.started_at = time.time()
     yield
     logger.info("Shutting down Detecto")
 
@@ -81,6 +89,8 @@ async def image_error_handler(request: Request, exc: ImageError):
 
 
 app.include_router(detect.router)
+app.include_router(history.router)
+app.include_router(stats.router)
 
 
 @app.get("/health", tags=["system"])

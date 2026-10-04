@@ -32,10 +32,14 @@ class DetectionRecord(DetectionRecordCreate):
     timestamp: datetime  # UTC
 
 
-class HistoryQuery(BaseModel):
+class TimeRange(BaseModel):
+    """Optional inclusive time window (UTC if no timezone given)."""
+    start: datetime | None = None
+    end: datetime | None = None
+
+
+class HistoryQuery(TimeRange):
     """Filters for listing history (all optional)."""
-    start: datetime | None = None  # inclusive, UTC if no timezone given
-    end: datetime | None = None  # inclusive
     min_confidence: float | None = Field(None, ge=0, le=1)  # on avg_confidence
     min_count: int | None = Field(None, ge=0)
     limit: int = Field(100, ge=1, le=1000)
