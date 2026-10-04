@@ -10,10 +10,13 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from backend.config import get_settings
 from backend.db import get_repository
+from backend.routes import detect
 from backend.services.detector import get_detector
+from backend.utils.preprocessing import ImageError
 
 settings = get_settings()
 
@@ -65,6 +68,19 @@ async def log_requests(request: Request, call_next):
         request.method, request.url.path, response.status_code, elapsed_ms,
     )
     return response
+
+
+@app.exception_handler(ImageError)
+async def image_error_handler(request: Request, exc: ImageError):
+    """Turn invalid-image errors into clean JSON 4xx responses."""
+    logger.warning("%s %s rejected: %s", request.method, request.url.path, exc.detail)
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail, "error": type(exc).__name__},
+    )
+
+
+app.include_router(detect.router)
 
 
 @app.get("/health", tags=["system"])
