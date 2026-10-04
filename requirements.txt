@@ -1,0 +1,17 @@
+# --- Computer vision / model ---
+ultralytics>=8.4
+torch>=2.14
+torchvision>=0.29
+opencv-python>=5.0
+numpy>=2.5
+pillow>=12.3
+
+# --- Web API ---
+fastapi
+uvicorn[standard]
+python-multipart      # required by FastAPI for multipart/form-data uploads
+pydantic-settings     # typed config loaded from .env / environment
+
+# --- Testing ---
+pytest
+httpx2                # used by FastAPI's TestClient (replaces httpx)
