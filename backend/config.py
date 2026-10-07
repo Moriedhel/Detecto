@@ -46,7 +46,7 @@ class Settings(BaseSettings):
     allowed_content_types: list[str] = ["image/jpeg", "image/png"]
 
     # --- Server ---
-    cors_origins: list[str] = ["http://localhost:5173"]  # Vite dev server
+    cors_origins: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]  # Vite dev server
     log_level: str = "INFO"
     log_file: Path | None = BACKEND_DIR / "data" / "detecto.log"  # empty to disable
 

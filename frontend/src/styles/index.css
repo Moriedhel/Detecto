@@ -1,0 +1,192 @@
+/* ---------------------------------------------------------------------------
+   Design tokens (light default, dark via prefers-color-scheme)
+   --------------------------------------------------------------------------- */
+:root {
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --surface-2: #f0f2f5;
+  --border: #dde1e6;
+  --text: #1a1d21;
+  --text-muted: #5f6873;
+  --accent: #16a34a;        /* detection green, matches box colour */
+  --accent-contrast: #ffffff;
+  --warning: #d97706;
+  --danger: #dc2626;
+  --danger-bg: #fdecec;
+  --radius: 8px;
+  --shadow: 0 1px 2px rgb(0 0 0 / 6%), 0 1px 3px rgb(0 0 0 / 8%);
+  --font: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --mono: ui-monospace, 'Cascadia Code', Consolas, monospace;
+
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #111418;
+    --surface: #1a1e23;
+    --surface-2: #232830;
+    --border: #2f353d;
+    --text: #e6e8eb;
+    --text-muted: #9aa3ad;
+    --accent: #22c55e;
+    --accent-contrast: #0b1a10;
+    --warning: #f59e0b;
+    --danger: #f87171;
+    --danger-bg: #3a1d1d;
+    --shadow: 0 1px 2px rgb(0 0 0 / 40%);
+
+    color-scheme: dark;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Base
+   --------------------------------------------------------------------------- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+h1 {
+  font-size: 1.5rem;
+  margin: 0 0 0.25rem;
+}
+
+h2 {
+  font-size: 1.1rem;
+  margin: 0 0 0.5rem;
+}
+
+a {
+  color: var(--accent);
+}
+
+.muted {
+  color: var(--text-muted);
+  margin-top: 0;
+}
+
+/* ---------------------------------------------------------------------------
+   App shell
+   --------------------------------------------------------------------------- */
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 0.75rem 1.5rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.nav {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.nav a {
+  padding: 0.4rem 0.8rem;
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.nav a:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.nav a.active {
+  background: var(--surface-2);
+  color: var(--accent);
+}
+
+.app-main {
+  flex: 1;
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+/* ---------------------------------------------------------------------------
+   Backend status badge
+   --------------------------------------------------------------------------- */
+.status {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  min-width: 0;
+}
+
+.status-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.status-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.status-online .status-dot { background: var(--accent); }
+.status-loading .status-dot,
+.status-checking .status-dot { background: var(--warning); }
+.status-offline .status-dot { background: var(--danger); }
+.status-offline { color: var(--danger); }
+
+/* ---------------------------------------------------------------------------
+   Small screens
+   --------------------------------------------------------------------------- */
+@media (max-width: 640px) {
+  .app-header {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+  }
+
+  .status {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .app-main {
+    padding: 1rem;
+  }
+}
