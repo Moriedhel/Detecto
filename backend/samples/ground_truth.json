@@ -1,0 +1,19 @@
+{
+  "description": "Manually counted visible people per sample image. A person counts if any recognisable part of their body (head, torso or most of a limb) is visible. Statues, reflections and specks too small to identify are not counted.",
+  "selection_rule": "COCO val2017 in ascending ID order from #10092: the first 2 images with no people, plus every everyday scene with 1-15 unambiguously countable people until 10 were collected. Images skipped by the rule: #12120, #12639, #12670 (crowds over 15 or many tiny background people) and #12280 (count ambiguous: faint person behind glass). Chosen before running the model on any of them.",
+  "counted_on": "2026-10-07",
+  "images": [
+    {"file": "01_bedroom_empty.jpg",        "people": 0, "source": "COCO val2017 #10092", "conditions": ["indoor", "no people"],                 "notes": "Mosquito net over the bed."},
+    {"file": "02_garage_cat_empty.jpg",     "people": 0, "source": "COCO val2017 #10363", "conditions": ["indoor", "dim", "no people"],          "notes": "Cat on a car bonnet in a garage."},
+    {"file": "03_living_room_gaming.jpg",   "people": 3, "source": "COCO val2017 #10707", "conditions": ["indoor", "warm light", "motion blur"],  "notes": "Two seated on the sofa, one standing."},
+    {"file": "04_baseball_catcher.jpg",     "people": 1, "source": "COCO val2017 #10764", "conditions": ["single person", "crouching"],          "notes": ""},
+    {"file": "05_prom_couple.jpg",          "people": 2, "source": "COCO val2017 #11051", "conditions": ["indoor", "close-up"],                  "notes": ""},
+    {"file": "06_bikes_path.jpg",           "people": 2, "source": "COCO val2017 #11149", "conditions": ["outdoor", "cut off at edge"],          "notes": "Motorcyclist on the left and a man on the right, both partly out of frame."},
+    {"file": "07_street_crossing.jpg",      "people": 4, "source": "COCO val2017 #11197", "conditions": ["street", "occlusion", "small/distant"], "notes": "One person mostly hidden behind the man in the navy jacket; cyclist far right is small."},
+    {"file": "08_street_statues.jpg",       "people": 4, "source": "COCO val2017 #11511", "conditions": ["street", "dim background", "statues"],  "notes": "Four real people in the shaded background. The two bronze statues are NOT people (false-positive test)."},
+    {"file": "09_pizza_dinner.jpg",         "people": 1, "source": "COCO val2017 #12576", "conditions": ["indoor", "dim", "background person"],  "notes": "Elderly woman behind the table, partly hidden."},
+    {"file": "10_stable_father_baby.jpg",   "people": 2, "source": "COCO val2017 #12748", "conditions": ["close-up", "overlapping", "child"],     "notes": "Baby held in father's arms."},
+    {"file": "11_wheel_repair.jpg",         "people": 1, "source": "COCO val2017 #13177", "conditions": ["single person", "crouching"],          "notes": ""},
+    {"file": "12_frisbee_team.jpg",         "people": 5, "source": "COCO val2017 #13291", "conditions": ["outdoor", "dusk", "group", "small/distant"], "notes": "Four players in front plus one distant player on the far left (~20 px, recognisable when zoomed). Count corrected from 4 to 5 after the model flagged it and a zoomed check confirmed a person. A fainter figure next to it is too unclear to count."}
+  ]
+}

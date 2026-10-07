@@ -11,7 +11,7 @@ from backend.services.detector import get_detector
 from backend.utils.preprocessing import preprocess
 from backend.utils.visualization import draw_detections, encode_jpeg_base64
 
-SAMPLES = Path(__file__).resolve().parent.parent / "samples"
+SAMPLES = Path(__file__).resolve().parent / "fixtures"
 
 
 @pytest.fixture(scope="module")

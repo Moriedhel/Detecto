@@ -12,6 +12,7 @@ from __future__ import annotations
 import json
 import math
 import sqlite3
+from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from functools import lru_cache
@@ -21,6 +22,7 @@ from backend.config import get_settings
 from backend.models.record import (
     DetectionRecord,
     DetectionRecordCreate,
+    HistoryFilter,
     HistoryPage,
     HistoryQuery,
     TimeRange,
@@ -116,6 +118,22 @@ class DetectionRepository:
                 [*params, q.limit, q.offset],
             ).fetchall()
         return HistoryPage(total=total, items=[self._row_to_record(r) for r in rows])
+
+    def iter_records(self, f: HistoryFilter, batch_size: int = 500) -> Iterator[DetectionRecord]:
+        """Yield every record matching the filters, fetched in batches.
+
+        Each batch uses its own short-lived connection, so the generator can be
+        consumed across threads (as StreamingResponse does) without holding a
+        connection open for the whole export.
+        """
+        q = HistoryQuery(**f.model_dump(include=set(HistoryFilter.model_fields)),
+                         limit=batch_size, offset=0)
+        while True:
+            items = self.list(q).items
+            yield from items
+            if len(items) < batch_size:
+                return
+            q.offset += batch_size
 
     def get(self, record_id: int) -> DetectionRecord | None:
         with self._connect() as conn:

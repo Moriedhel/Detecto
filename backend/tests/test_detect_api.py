@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 from backend.db import DetectionRepository, get_repository
 from backend.main import app
 
-SAMPLES = Path(__file__).resolve().parent.parent / "samples"
+SAMPLES = Path(__file__).resolve().parent / "fixtures"
 BUS = (SAMPLES / "bus.jpg").read_bytes()
 
 

@@ -31,7 +31,8 @@ class Settings(BaseSettings):
     device: str = "cpu"  # "cpu" or a CUDA index like "0"
     conf_threshold: float = 0.4  # minimum confidence to keep a detection
     iou_threshold: float = 0.45  # NMS overlap threshold
-    img_size: int = Field(640, gt=0)  # inference input size (px)
+    # 1280 finds far more small/crowded people than 640 (see backend/evaluation/results.md)
+    img_size: int = Field(1280, gt=0)  # inference input size (px)
 
     # --- Preprocessing ---
     max_image_side: int = Field(1280, gt=0)  # larger images are downscaled first

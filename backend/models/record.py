@@ -38,13 +38,22 @@ class TimeRange(BaseModel):
     end: datetime | None = None
 
 
-class HistoryQuery(TimeRange):
-    """Filters for listing history (all optional)."""
+class HistoryFilter(TimeRange):
+    """Filters shared by history listing and export (all optional)."""
     min_confidence: float | None = Field(None, ge=0, le=1)  # on avg_confidence
     min_count: int | None = Field(None, ge=0)
+    newest_first: bool = True
+
+
+class HistoryQuery(HistoryFilter):
+    """History filters plus pagination."""
     limit: int = Field(100, ge=1, le=1000)
     offset: int = Field(0, ge=0)
-    newest_first: bool = True
+
+
+class ExportQuery(HistoryFilter):
+    """History filters for CSV export (no pagination: exports all matches)."""
+    include_detections: bool = Field(False, description="Add a JSON column with every person's box")
 
 
 class HistoryPage(BaseModel):

@@ -1,0 +1,245 @@
+{
+  "meta": {
+    "model": "yolov8n.pt",
+    "device": "cpu",
+    "img_size": 1280,
+    "enhance": false,
+    "repeat": 3,
+    "images": 12,
+    "run_at": "2026-10-07 19:24:39"
+  },
+  "results": [
+    {
+      "summary": {
+        "conf_threshold": 0.4,
+        "images": 12,
+        "processed": 12,
+        "total_actual": 25,
+        "total_detected": 25,
+        "total_correct": 24,
+        "total_extra": 1,
+        "total_missed": 1,
+        "accuracy": 0.96,
+        "fp_rate": 0.04,
+        "avg_inference_ms": 209.3,
+        "avg_end_to_end_ms": 238.6,
+        "avg_confidence": 0.6844,
+        "reliability": 1.0
+      },
+      "images": [
+        {
+          "file": "01_bedroom_empty.jpg",
+          "ok": true,
+          "conditions": [
+            "indoor",
+            "no people"
+          ],
+          "actual": 0,
+          "detected": 0,
+          "correct": 0,
+          "extra": 0,
+          "missed": 0,
+          "avg_confidence": null,
+          "inference_ms": 193.7,
+          "end_to_end_ms": 245.3,
+          "size": "640x426"
+        },
+        {
+          "file": "02_garage_cat_empty.jpg",
+          "ok": true,
+          "conditions": [
+            "indoor",
+            "dim",
+            "no people"
+          ],
+          "actual": 0,
+          "detected": 0,
+          "correct": 0,
+          "extra": 0,
+          "missed": 0,
+          "avg_confidence": null,
+          "inference_ms": 195.5,
+          "end_to_end_ms": 214.2,
+          "size": "640x361"
+        },
+        {
+          "file": "03_living_room_gaming.jpg",
+          "ok": true,
+          "conditions": [
+            "indoor",
+            "warm light",
+            "motion blur"
+          ],
+          "actual": 3,
+          "detected": 3,
+          "correct": 3,
+          "extra": 0,
+          "missed": 0,
+          "avg_confidence": 0.721,
+          "inference_ms": 220.7,
+          "end_to_end_ms": 251.1,
+          "size": "640x480"
+        },
+        {
+          "file": "04_baseball_catcher.jpg",
+          "ok": true,
+          "conditions": [
+            "single person",
+            "crouching"
+          ],
+          "actual": 1,
+          "detected": 1,
+          "correct": 1,
+          "extra": 0,
+          "missed": 0,
+          "avg_confidence": 0.671,
+          "inference_ms": 190.2,
+          "end_to_end_ms": 215.5,
+          "size": "640x424"
+        },
+        {
+          "file": "05_prom_couple.jpg",
+          "ok": true,
+          "conditions": [
+            "indoor",
+            "close-up"
+          ],
+          "actual": 2,
+          "detected": 2,
+          "correct": 2,
+          "extra": 0,
+          "missed": 0,
+          "avg_confidence": 0.695,
+          "inference_ms": 315.5,
+          "end_to_end_ms": 348.3,
+          "size": "640x536"
+        },
+        {
+          "file": "06_bikes_path.jpg",
+          "ok": true,
+          "conditions": [
+            "outdoor",
+            "cut off at edge"
+          ],
+          "actual": 2,
+          "detected": 1,
+          "correct": 1,
+          "extra": 0,
+          "missed": 1,
+          "avg_confidence": 0.665,
+          "inference_ms": 210.0,
+          "end_to_end_ms": 237.6,
+          "size": "500x375"
+        },
+        {
+          "file": "07_street_crossing.jpg",
+          "ok": true,
+          "conditions": [
+            "street",
+            "occlusion",
+            "small/distant"
+          ],
+          "actual": 4,
+          "detected": 4,
+          "correct": 4,
+          "extra": 0,
+          "missed": 0,
+          "avg_confidence": 0.69,
+          "inference_ms": 175.0,
+          "end_to_end_ms": 200.9,
+          "size": "640x427"
+        },
+        {
+          "file": "08_street_statues.jpg",
+          "ok": true,
+          "conditions": [
+            "street",
+            "dim background",
+            "statues"
+          ],
+          "actual": 4,
+          "detected": 5,
+          "correct": 4,
+          "extra": 1,
+          "missed": 0,
+          "avg_confidence": 0.737,
+          "inference_ms": 216.4,
+          "end_to_end_ms": 248.1,
+          "size": "640x464"
+        },
+        {
+          "file": "09_pizza_dinner.jpg",
+          "ok": true,
+          "conditions": [
+            "indoor",
+            "dim",
+            "background person"
+          ],
+          "actual": 1,
+          "detected": 1,
+          "correct": 1,
+          "extra": 0,
+          "missed": 0,
+          "avg_confidence": 0.481,
+          "inference_ms": 216.8,
+          "end_to_end_ms": 254.0,
+          "size": "480x640"
+        },
+        {
+          "file": "10_stable_father_baby.jpg",
+          "ok": true,
+          "conditions": [
+            "close-up",
+            "overlapping",
+            "child"
+          ],
+          "actual": 2,
+          "detected": 2,
+          "correct": 2,
+          "extra": 0,
+          "missed": 0,
+          "avg_confidence": 0.56,
+          "inference_ms": 206.0,
+          "end_to_end_ms": 234.3,
+          "size": "480x640"
+        },
+        {
+          "file": "11_wheel_repair.jpg",
+          "ok": true,
+          "conditions": [
+            "single person",
+            "crouching"
+          ],
+          "actual": 1,
+          "detected": 1,
+          "correct": 1,
+          "extra": 0,
+          "missed": 0,
+          "avg_confidence": 0.693,
+          "inference_ms": 171.7,
+          "end_to_end_ms": 196.5,
+          "size": "640x427"
+        },
+        {
+          "file": "12_frisbee_team.jpg",
+          "ok": true,
+          "conditions": [
+            "outdoor",
+            "dusk",
+            "group",
+            "small/distant"
+          ],
+          "actual": 5,
+          "detected": 5,
+          "correct": 5,
+          "extra": 0,
+          "missed": 0,
+          "avg_confidence": 0.697,
+          "inference_ms": 200.0,
+          "end_to_end_ms": 217.3,
+          "size": "500x335"
+        }
+      ]
+    }
+  ]
+}
