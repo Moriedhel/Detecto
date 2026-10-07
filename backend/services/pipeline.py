@@ -7,6 +7,7 @@ script, future WebSocket stream) and tested directly.
 import logging
 import time
 from dataclasses import asdict
+from datetime import datetime, timezone
 
 from backend.config import Settings
 from backend.db import DetectionRepository
@@ -34,10 +35,14 @@ def run_detection(
     conf: float | None = None,
     enhance: bool | None = None,
     return_image: bool = True,
+    img_size: int | None = None,
+    save: bool = True,
 ) -> DetectResponse:
-    """Validate, detect, save and build the API response.
+    """Validate, detect, optionally save, and build the API response.
 
-    Raises ImageError subclasses for invalid input (mapped to 4xx by main.py).
+    `save=False` skips the history write (e.g. live webcam frames, which the
+    client saves selectively). Raises ImageError subclasses for invalid input
+    (mapped to 4xx by main.py).
     """
     t_start = time.perf_counter()
 
@@ -51,7 +56,8 @@ def run_detection(
     preprocess_ms = _ms(t)
 
     conf = settings.conf_threshold if conf is None else conf
-    result = detector.detect(pre, conf=conf)
+    img_size = img_size or settings.img_size
+    result = detector.detect(pre, conf=conf, img_size=img_size)
 
     annotated, overlay_ms = None, 0.0
     if return_image:
@@ -60,29 +66,36 @@ def run_detection(
         overlay_ms = _ms(t)
 
     width, height = result.image_size
-    record = repo.add(DetectionRecordCreate(
-        count=result.count,
-        avg_confidence=result.avg_confidence,
-        inference_ms=result.inference_ms,
-        total_ms=result.total_ms,
-        source=source,
-        image_width=width,
-        image_height=height,
-        conf_threshold=conf,
-        contrast_enhanced=pre.contrast_enhanced,
-        detections=[PersonBox(bbox=d.bbox, confidence=d.confidence, center=d.center)
-                    for d in result.detections],
-    ))
+    record_id, timestamp = None, datetime.now(timezone.utc)
+    if save:
+        record = repo.add(DetectionRecordCreate(
+            count=result.count,
+            avg_confidence=result.avg_confidence,
+            inference_ms=result.inference_ms,
+            total_ms=result.total_ms,
+            source=source,
+            image_width=width,
+            image_height=height,
+            conf_threshold=conf,
+            contrast_enhanced=pre.contrast_enhanced,
+            detections=[PersonBox(bbox=d.bbox, confidence=d.confidence, center=d.center)
+                        for d in result.detections],
+        ))
+        record_id, timestamp = record.id, record.timestamp
 
     total_ms = _ms(t_start)
     logger.info(
-        "detect source=%s size=%dx%d people=%d avg_conf=%s inference=%.1fms total=%.1fms",
-        source, width, height, result.count, result.avg_confidence, result.inference_ms, total_ms,
+        "detect source=%s size=%dx%d imgsz=%d people=%d avg_conf=%s inference=%.1fms "
+        "total=%.1fms saved=%s",
+        source, width, height, img_size, result.count, result.avg_confidence,
+        result.inference_ms, total_ms, save,
     )
 
     return DetectResponse(
-        record_id=record.id,
-        timestamp=record.timestamp,
+        record_id=record_id,
+        saved=save,
+        timestamp=timestamp,
+        img_size=img_size,
         count=result.count,
         avg_confidence=result.avg_confidence,
         detections=[PersonDetection(**asdict(d)) for d in result.detections],

@@ -73,27 +73,30 @@ class PersonDetector:
         dummy = np.zeros((self.settings.img_size, self.settings.img_size, 3), dtype=np.uint8)
         self._predict(dummy, self.settings.conf_threshold)
 
-    def _predict(self, image: np.ndarray, conf: float):
+    def _predict(self, image: np.ndarray, conf: float, img_size: int | None = None):
         with self._lock:
             return self.model.predict(
                 image,
                 conf=conf,
                 iou=self.settings.iou_threshold,
-                imgsz=self.settings.img_size,
+                imgsz=img_size or self.settings.img_size,
                 device=self.device,
                 classes=[PERSON_CLASS_ID],
                 verbose=False,
             )[0]
 
-    def detect(self, pre: PreprocessResult, conf: float | None = None) -> DetectionResult:
+    def detect(self, pre: PreprocessResult, conf: float | None = None,
+               img_size: int | None = None) -> DetectionResult:
         """Run person detection on a preprocessed frame.
 
-        Box coordinates are scaled back to the original (pre-resize) image.
+        `img_size` overrides the model input size for this call (e.g. 640 for
+        faster live frames). Box coordinates are scaled back to the original
+        (pre-resize) image.
         """
         conf = self.settings.conf_threshold if conf is None else conf
 
         t0 = time.perf_counter()
-        result = self._predict(pre.image, conf)
+        result = self._predict(pre.image, conf, img_size)
         total_ms = (time.perf_counter() - t0) * 1000
 
         boxes = result.boxes

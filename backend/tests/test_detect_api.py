@@ -70,6 +70,37 @@ def test_detect_base64_json(client, repo):
     assert repo.get(res.json()["record_id"]).source == "webcam"
 
 
+def test_default_saves_and_reports_img_size(client, repo):
+    body = _upload(client, return_image=False).json()
+    assert body["saved"] is True and body["record_id"] is not None
+    assert body["img_size"] == 1280
+
+
+def test_save_false_skips_history(client, repo):
+    res = client.post(
+        "/detect/base64",
+        json={"image": base64.b64encode(BUS).decode(), "source": "webcam"},
+        params={"save": False, "return_image": False},
+    )
+    body = res.json()
+    assert res.status_code == 200
+    assert body["saved"] is False and body["record_id"] is None
+    assert body["count"] >= 3  # detection still runs
+    assert body["timestamp"]
+    assert repo.list().total == 0
+
+
+def test_img_size_override(client):
+    small = _upload(client, img_size=640, return_image=False, save=False).json()
+    assert small["img_size"] == 640
+    assert small["count"] >= 3
+
+
+@pytest.mark.parametrize("size", [100, 650, 4096])
+def test_invalid_img_size_is_422(client, size):
+    assert _upload(client, img_size=size).status_code == 422
+
+
 # --- error paths ------------------------------------------------------------
 
 def test_no_image_is_400(client):

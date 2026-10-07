@@ -1,4 +1,4 @@
-"""Detection endpoints.
+﻿"""Detection endpoints.
 
 POST /detect          multipart/form-data: `file` upload OR `image_base64` field
 POST /detect/base64   JSON: {"image": "<base64 or data URL>", "source": "webcam"}
@@ -29,10 +29,21 @@ class DetectOptions:
         conf: Annotated[float | None, Query(ge=0, le=1, description="Confidence threshold (default from config)")] = None,
         enhance: Annotated[bool | None, Query(description="Apply CLAHE contrast boost (default from config)")] = None,
         return_image: Annotated[bool, Query(description="Include annotated image as base64")] = True,
+        img_size: Annotated[int | None, Query(
+            ge=320, le=1920, multiple_of=32,
+            description="Model input size (default from config). 640 is ~2-3x faster, "
+                        "1280 finds more small/distant people",
+        )] = None,
+        save: Annotated[bool, Query(
+            description="Store the result in history. Use false for live frames "
+                        "and save selectively",
+        )] = True,
     ):
         self.conf = conf
         self.enhance = enhance
         self.return_image = return_image
+        self.img_size = img_size
+        self.save = save
 
 
 # Shared dependencies (overridable in tests via app.dependency_overrides)
@@ -65,6 +76,7 @@ def detect(
         data, content_type=content_type, source=source,
         settings=settings, detector=detector, repo=repo,
         conf=opts.conf, enhance=opts.enhance, return_image=opts.return_image,
+        img_size=opts.img_size, save=opts.save,
     )
 
 
@@ -83,4 +95,5 @@ def detect_base64(
         data, content_type=content_type, source=body.source or "base64",
         settings=settings, detector=detector, repo=repo,
         conf=opts.conf, enhance=opts.enhance, return_image=opts.return_image,
+        img_size=opts.img_size, save=opts.save,
     )

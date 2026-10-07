@@ -24,8 +24,10 @@ class Timings(BaseModel):
 
 
 class DetectResponse(BaseModel):
-    record_id: int
+    record_id: int | None = Field(description="History id, or null when save=false")
+    saved: bool
     timestamp: datetime
+    img_size: int = Field(description="Model input size used for this request")
     count: int
     avg_confidence: float | None
     detections: list[PersonDetection]
