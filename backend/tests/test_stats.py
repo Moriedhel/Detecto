@@ -107,6 +107,18 @@ def test_hourly_endpoint(client):
     assert [b["hour"] for b in body["buckets"]] == ["12", "13", "14", "15", "16", "17"]
 
 
+def test_stats_and_hourly_accept_record_filters(client):
+    # records: counts 0..5, avg confidence 0.58..0.90 for counts 1..5
+    body = client.get("/stats", params={"min_count": 3}).json()["summary"]
+    assert body["total_detections"] == 3 and body["total_people"] == 12
+
+    body = client.get("/stats", params={"min_confidence": 0.8}).json()["summary"]
+    assert body["total_detections"] == 2  # counts 4 (0.82) and 5 (0.90)
+
+    hourly = client.get("/stats/hourly", params={"min_count": 4}).json()["buckets"]
+    assert [b["max_people"] for b in hourly] == [4, 5]
+
+
 @pytest.mark.parametrize("path,params,code", [
     ("/stats", {"start": "2026-10-02T00:00:00Z", "end": "2026-10-01T00:00:00Z"}, 400),
     ("/stats/hourly", {"mode": "daily"}, 422),

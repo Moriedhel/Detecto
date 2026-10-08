@@ -2,6 +2,9 @@
 
 GET /stats          summary of stored detections + runtime/model info
 GET /stats/hourly   detections grouped per hour (timeline or hour-of-day)
+
+Both accept the same record filters as /history (time range, min_confidence,
+min_count), so dashboards show numbers that agree with the history table.
 """
 
 import time
@@ -11,7 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
 from backend.config import Settings, get_settings
 from backend.db import DetectionRepository, get_repository
-from backend.models.record import TimeRange
+from backend.models.record import RecordFilter, TimeRange
 from backend.models.stats import HourlyQuery, HourlyStats, RuntimeInfo, StatsResponse
 
 router = APIRouter(prefix="/stats", tags=["stats"])
@@ -27,7 +30,7 @@ def _check_range(q: TimeRange) -> None:
 
 @router.get("", response_model=StatsResponse, summary="Summary statistics and performance")
 def get_stats(request: Request, repo: RepoDep, settings: SettingsDep,
-              q: Annotated[TimeRange, Query()]):
+              q: Annotated[RecordFilter, Query()]):
     _check_range(q)
     detector = getattr(request.app.state, "detector", None)
     started = getattr(request.app.state, "started_at", time.time())

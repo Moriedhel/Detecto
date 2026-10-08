@@ -5,7 +5,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from backend.models.record import TimeRange
+from backend.models.record import RecordFilter
 
 
 class SummaryStats(BaseModel):
@@ -38,7 +38,7 @@ class StatsResponse(BaseModel):
     runtime: RuntimeInfo
 
 
-class HourlyQuery(TimeRange):
+class HourlyQuery(RecordFilter):
     mode: Literal["timeline", "hour_of_day"] = Field(
         "timeline",
         description="timeline: one bucket per calendar hour; "

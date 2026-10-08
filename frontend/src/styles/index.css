@@ -13,6 +13,8 @@
   --warning: #d97706;
   --danger: #dc2626;
   --danger-bg: #fdecec;
+  --chart: #16a34a;         /* chart marks; validated vs surface (dataviz validator) */
+  --chart-grid: #e8ebef;    /* hairline gridlines, one step off the surface */
   --radius: 8px;
   --shadow: 0 1px 2px rgb(0 0 0 / 6%), 0 1px 3px rgb(0 0 0 / 8%);
   --font: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
@@ -34,6 +36,8 @@
     --warning: #f59e0b;
     --danger: #f87171;
     --danger-bg: #3a1d1d;
+    --chart: #1aad52;       /* own dark step: #22c55e is too light for marks on #1a1e23 */
+    --chart-grid: #2a3038;
     --shadow: 0 1px 2px rgb(0 0 0 / 40%);
 
     color-scheme: dark;

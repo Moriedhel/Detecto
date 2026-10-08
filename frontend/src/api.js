@@ -153,21 +153,26 @@ export function getHistoryItem(id, { signal } = {}) {
   return request(`history/${encodeURIComponent(id)}`, { signal })
 }
 
-/** GET /stats: { summary, runtime } */
-export function getStats({ start, end } = {}, { signal } = {}) {
-  return request('stats', { params: { start, end }, signal })
+// Shared record filters for /stats and /stats/hourly (same as /history, minus sort order)
+function recordParams({ start, end, minConfidence, minCount } = {}) {
+  return { start, end, min_confidence: minConfidence, min_count: minCount }
+}
+
+/** GET /stats: { summary, runtime }. Accepts the same filters as getHistory. */
+export function getStats(filters = {}, { signal } = {}) {
+  return request('stats', { params: recordParams(filters), signal })
 }
 
 /**
  * GET /stats/hourly. Buckets default to the browser's local time zone.
- * @param {{mode?: 'timeline'|'hour_of_day', tzOffsetMinutes?: number, start?, end?}} [options]
+ * @param {{mode?: 'timeline'|'hour_of_day', tzOffsetMinutes?: number, start?, end?, minConfidence?, minCount?}} [options]
  */
 export function getHourly(
-  { mode = 'timeline', tzOffsetMinutes = -new Date().getTimezoneOffset(), start, end } = {},
+  { mode = 'timeline', tzOffsetMinutes = -new Date().getTimezoneOffset(), ...filters } = {},
   { signal } = {},
 ) {
   return request('stats/hourly', {
-    params: { mode, tz_offset_minutes: tzOffsetMinutes, start, end },
+    params: { mode, tz_offset_minutes: tzOffsetMinutes, ...recordParams(filters) },
     signal,
   })
 }

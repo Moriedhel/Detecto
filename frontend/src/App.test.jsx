@@ -31,7 +31,8 @@ describe('App shell', () => {
   it('navigates to History', async () => {
     renderAt('/')
     await userEvent.click(screen.getByRole('link', { name: 'History' }))
-    expect(screen.getByRole('heading', { name: 'History' })).toBeInTheDocument()
+    // History is lazy-loaded, so its heading appears asynchronously
+    expect(await screen.findByRole('heading', { name: 'History' })).toBeInTheDocument()
   })
 
   it('redirects unknown paths to Detection', () => {

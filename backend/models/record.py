@@ -38,10 +38,14 @@ class TimeRange(BaseModel):
     end: datetime | None = None
 
 
-class HistoryFilter(TimeRange):
-    """Filters shared by history listing and export (all optional)."""
+class RecordFilter(TimeRange):
+    """Record filters shared by history, export and stats (all optional)."""
     min_confidence: float | None = Field(None, ge=0, le=1)  # on avg_confidence
     min_count: int | None = Field(None, ge=0)
+
+
+class HistoryFilter(RecordFilter):
+    """Record filters plus sort order (history listing and export)."""
     newest_first: bool = True
 
 
