@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 
-import { detectBase64 } from '../api'
+import { detectBase64, endSession } from '../api'
 import { DEFAULT_CONF } from '../config'
 import useCamera from '../hooks/useCamera'
 import useElementWidth from '../hooks/useElementWidth'
@@ -18,6 +18,10 @@ const MIN_FRAME_MS = 100 // cap at ~10 fps to leave CPU for the rest of the mach
 const HIDDEN_POLL_MS = 500 // check interval while the tab is hidden
 
 const sleep = (t) => new Promise((r) => setTimeout(r, t))
+
+/** Random tracking-session id (crypto.randomUUID needs a secure context, which localhost is). */
+const newSessionId = () =>
+  globalThis.crypto?.randomUUID?.() ?? `s-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`
 
 // Names recognised in the current frame (or a note that faces are unknown).
 function RecognisedNow({ faces }) {
@@ -53,6 +57,14 @@ export default function WebcamMode() {
   useEffect(() => {
     settingsRef.current = settings
   }, [settings])
+
+  // One tracking session per camera run: track IDs stay stable until the camera stops
+  const sessionRef = useRef(null)
+  const endTracking = () => {
+    if (sessionRef.current) endSession(sessionRef.current).catch(() => {}) // it expires anyway
+    sessionRef.current = null
+  }
+  useEffect(() => endTracking, []) // end the session when leaving the tab
 
   const live = cam.status === 'live'
 
@@ -91,7 +103,10 @@ export default function WebcamMode() {
       controller = new AbortController()
       const res = await detectBase64(
         shot.dataUrl,
-        { source: 'webcam', imgSize: LIVE_IMG_SIZE, returnImage: false, save, conf, enhance, faces },
+        {
+          source: 'webcam', imgSize: LIVE_IMG_SIZE, returnImage: false, save, conf, enhance, faces,
+          session: sessionRef.current,
+        },
         { signal: controller.signal },
       )
       if (cancelled) return null
@@ -108,6 +123,7 @@ export default function WebcamMode() {
           if (!cancelled && err.name !== 'AbortError') {
             setError(`Live detection stopped: ${err.message}`)
             cam.stop()
+            endTracking()
           }
           return
         }
@@ -128,11 +144,14 @@ export default function WebcamMode() {
     setError(null)
     setFrame(null)
     setPerf({ fps: null, latency: null })
+    endTracking()
+    sessionRef.current = newSessionId()
     await cam.start(deviceId)
   }
 
   const stop = () => {
     cam.stop()
+    endTracking()
     setFrame(null)
     setHovered(null)
   }
@@ -236,6 +255,12 @@ export default function WebcamMode() {
               <div className="stat stat-main">
                 <dt>People</dt>
                 <dd data-testid="live-count">{frame ? frame.count : '–'}</dd>
+              </div>
+              <div className="stat">
+                <dt>Unique people</dt>
+                <dd data-testid="live-unique" title="Different people tracked since the camera started">
+                  {frame?.tracking ? frame.tracking.unique_people : '–'}
+                </dd>
               </div>
               <div className="stat">
                 <dt>Avg confidence</dt>

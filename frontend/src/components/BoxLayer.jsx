@@ -20,8 +20,10 @@ export default function BoxLayer({ width, height, detections = [], faces = null,
 
   const labels = detections.map((d, i) => {
     const [x1, y1] = d.bbox
-    // A recognised face names the person; otherwise number + detection confidence
-    const text = d.identity?.name ? `#${i + 1} ${d.identity.name}` : `#${i + 1} ${pct(d.confidence)}`
+    // Track ID when tracking (stable across frames), else position in the list.
+    // A recognised face names the person; otherwise show the detection confidence.
+    const num = d.track_id ?? i + 1
+    const text = d.identity?.name ? `#${num} ${d.identity.name}` : `#${num} ${pct(d.confidence)}`
     const w = text.length * fontSize * 0.62 + pad * 2
     return {
       text,

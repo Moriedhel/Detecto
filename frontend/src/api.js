@@ -103,8 +103,8 @@ async function request(path, { method = 'GET', params, body, signal } = {}) {
 }
 
 // Shared /detect query options
-function detectParams({ conf, enhance, returnImage, imgSize, save, faces } = {}) {
-  return { conf, enhance, return_image: returnImage, img_size: imgSize, save, faces }
+function detectParams({ conf, enhance, returnImage, imgSize, save, faces, session } = {}) {
+  return { conf, enhance, return_image: returnImage, img_size: imgSize, save, faces, session }
 }
 
 // Shared /history and export filters
@@ -181,6 +181,59 @@ export function getHourly(
 /** DELETE /reset: { deleted } */
 export function resetHistory({ signal } = {}) {
   return request('reset', { method: 'DELETE', signal })
+}
+
+/** DELETE /detect/sessions/{id}: end a tracking session (they also expire when idle). */
+export function endSession(id) {
+  return request(`detect/sessions/${encodeURIComponent(id)}`, { method: 'DELETE' })
+}
+
+// --- video analysis -------------------------------------------------------------
+
+/**
+ * POST /videos: upload a video and start an analysis job.
+ * Uses XMLHttpRequest because fetch can't report upload progress.
+ * @param {File} file
+ * @param {{conf?: number, imgSize?: number, sampleFps?: number, enhance?: boolean}} [options]
+ * @param {{signal?: AbortSignal, onUploadProgress?: (fraction: number) => void}} [extra]
+ * @returns {Promise<object>} the created job
+ */
+export function uploadVideo(file, { conf, imgSize, sampleFps, enhance } = {}, { signal, onUploadProgress } = {}) {
+  const url = buildUrl('videos', { conf, img_size: imgSize, sample_fps: sampleFps, enhance })
+  const form = new FormData()
+  form.append('file', file, file.name)
+
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest()
+    xhr.open('POST', url)
+    xhr.responseType = 'text'
+    xhr.upload.onprogress = (e) => e.lengthComputable && onUploadProgress?.(e.loaded / e.total)
+    xhr.onerror = () =>
+      reject(new ApiError(`Cannot reach the API at ${API_URL}. Is the backend running?`, { status: 0, type: 'NetworkError' }))
+    xhr.onabort = () => reject(new DOMException('Upload cancelled', 'AbortError'))
+    xhr.onload = async () => {
+      // Reuse the fetch error handling by wrapping the reply in a Response
+      const res = new Response(xhr.responseText || null, { status: xhr.status })
+      if (!res.ok) return reject(await toApiError(res))
+      try {
+        resolve(JSON.parse(xhr.responseText))
+      } catch {
+        reject(new ApiError('The server sent an invalid response.', { status: xhr.status, type: 'InvalidResponse' }))
+      }
+    }
+    signal?.addEventListener('abort', () => xhr.abort(), { once: true })
+    xhr.send(form)
+  })
+}
+
+/** GET /videos/{id}: { id, status, progress, error, result? } */
+export function getVideoJob(id, { signal } = {}) {
+  return request(`videos/${encodeURIComponent(id)}`, { signal })
+}
+
+/** DELETE /videos/{id}: cancel a running job or forget a finished one. */
+export function deleteVideoJob(id) {
+  return request(`videos/${encodeURIComponent(id)}`, { method: 'DELETE' })
 }
 
 // --- face recognition ---------------------------------------------------------

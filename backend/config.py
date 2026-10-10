@@ -41,6 +41,19 @@ class Settings(BaseSettings):
     face_match_threshold: float = 0.363  # SFace cosine similarity for "same person" (OpenCV's value)
     face_max_photos: int = Field(10, gt=0)  # photos per enrolment request
 
+    # --- Tracking (ByteTrack) ---
+    track_memory_s: float = Field(3.0, gt=0)  # keep a lost person's ID this long (occlusion, leaving briefly)
+    track_low_conf: float = 0.1  # weak detections may continue an existing track (ByteTrack 2nd stage)
+    track_session_ttl_s: float = Field(60.0, gt=0)  # live sessions are dropped after this long idle
+    track_max_sessions: int = Field(20, gt=0)
+
+    # --- Video analysis ---
+    max_video_mb: int = Field(200, gt=0)
+    max_video_seconds: float = Field(600.0, gt=0)  # longer videos are rejected
+    video_sample_fps: float = Field(10.0, gt=0)  # frames analysed per second of video (default)
+    video_img_size: int = Field(640, gt=0)  # model input size for video frames (speed)
+    video_jobs_kept: int = Field(10, gt=0)  # finished jobs kept in memory
+
     # --- Preprocessing ---
     max_image_side: int = Field(1280, gt=0)  # larger images are downscaled first
     enhance_contrast: bool = False  # apply CLAHE by default (can be set per request)
@@ -57,7 +70,7 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     log_file: Path | None = BACKEND_DIR / "data" / "detecto.log"  # empty to disable
 
-    @field_validator("conf_threshold", "iou_threshold", "face_det_score", "face_match_threshold")
+    @field_validator("conf_threshold", "iou_threshold", "face_det_score", "face_match_threshold", "track_low_conf")
     @classmethod
     def _between_zero_and_one(cls, v: float) -> float:
         if not 0.0 <= v <= 1.0:

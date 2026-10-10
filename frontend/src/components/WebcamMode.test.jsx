@@ -2,7 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { detectBase64, getPeople } from '../api'
+import { detectBase64, endSession, getPeople } from '../api'
 import DetectionPage from '../pages/DetectionPage'
 import { captureFrame } from '../utils/capture'
 
@@ -10,6 +10,7 @@ vi.mock('../api', async (importOriginal) => ({
   ...(await importOriginal()),
   detectBase64: vi.fn(),
   getPeople: vi.fn(),
+  endSession: vi.fn(() => Promise.resolve(null)),
 }))
 // jsdom has no canvas/video pixels: return a fixed fake frame
 vi.mock('../utils/capture', () => ({
@@ -106,6 +107,31 @@ describe('WebcamMode', () => {
     expect(detectBase64.mock.calls.at(-1)[1].faces).toBe(true)
   })
 
+  it('tracks with one session per camera run and shows track IDs', async () => {
+    mockCamera()
+    detectBase64.mockImplementation(async (_img, opts) => frameResult(2, {
+      detections: [7, 9].map((id, i) => ({
+        bbox: [10 + i * 200, 10, 150 + i * 200, 340], confidence: 0.8, center: [80 + i * 200, 175],
+        width: 140, height: 330, track_id: id, tracked_s: 2.5,
+      })),
+      tracking: { session_id: opts.session, unique_people: 3, active: 2, fps: 9.5 },
+    }))
+    const user = userEvent.setup()
+    await openWebcam(user)
+    await user.click(screen.getByRole('button', { name: 'Start camera' }))
+
+    expect(await screen.findByText('#7 80%')).toBeInTheDocument() // label uses the track ID
+    expect(screen.getByTestId('live-unique')).toHaveTextContent('3')
+    await waitFor(() => expect(detectBase64.mock.calls.length).toBeGreaterThan(2))
+    const sessions = new Set(detectBase64.mock.calls.map(([, o]) => o.session))
+    expect(sessions.size).toBe(1) // same session for every frame of this run
+    const [session] = sessions
+    expect(session).toMatch(/^[A-Za-z0-9_-]{8,64}$/)
+
+    await user.click(screen.getByRole('button', { name: 'Stop camera' }))
+    expect(endSession).toHaveBeenCalledWith(session)
+  })
+
   it('stops the camera and the loop', async () => {
     mockCamera()
     detectBase64.mockResolvedValue(frameResult(1))
@@ -131,7 +157,7 @@ describe('WebcamMode', () => {
     await user.click(screen.getByRole('button', { name: 'Start camera' }))
     await screen.findByTestId('live-count')
 
-    await user.click(screen.getByRole('tab', { name: 'Upload' }))
+    await user.click(screen.getByRole('tab', { name: 'Image' }))
     expect(track.stop).toHaveBeenCalled()
   })
 

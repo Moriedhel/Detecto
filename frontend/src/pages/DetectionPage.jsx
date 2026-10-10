@@ -1,15 +1,20 @@
-import { useState } from 'react'
+import { lazy, Suspense, useState } from 'react'
 
 import UploadMode from '../components/UploadMode'
 import WebcamMode from '../components/WebcamMode'
 
+// Video mode pulls in the chart library; load it only when the tab is opened
+const VideoMode = lazy(() => import('../components/video/VideoMode'))
+
 const MODES = [
-  { id: 'upload', label: 'Upload' },
+  { id: 'upload', label: 'Image' },
   { id: 'webcam', label: 'Webcam' },
+  { id: 'video', label: 'Video' },
 ]
 
-// Detection View: switch between image upload and live webcam detection.
-// Switching unmounts the other mode, which also releases the camera.
+// Detection View: switch between image upload, live webcam and video analysis.
+// Switching unmounts the other modes, which releases the camera and cancels
+// unfinished video work.
 export default function DetectionPage() {
   const [mode, setMode] = useState('upload')
 
@@ -18,7 +23,7 @@ export default function DetectionPage() {
       <header className="page-header page-header-row">
         <div>
           <h1>Detection</h1>
-          <p className="muted">Upload an image or use the webcam to count people.</p>
+          <p className="muted">Count people in an image, live from the webcam, or through a video.</p>
         </div>
         <div className="segmented" role="tablist" aria-label="Input source">
           {MODES.map((m) => (
@@ -39,7 +44,13 @@ export default function DetectionPage() {
       </header>
 
       <div role="tabpanel" id={`panel-${mode}`} aria-labelledby={`tab-${mode}`}>
-        {mode === 'upload' ? <UploadMode /> : <WebcamMode />}
+        {mode === 'upload' && <UploadMode />}
+        {mode === 'webcam' && <WebcamMode />}
+        {mode === 'video' && (
+          <Suspense fallback={<p className="muted">Loading video analysis…</p>}>
+            <VideoMode />
+          </Suspense>
+        )}
       </div>
     </section>
   )

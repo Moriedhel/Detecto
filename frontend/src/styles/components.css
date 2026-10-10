@@ -222,6 +222,7 @@ tbody tr.active {
   border-radius: var(--radius);
   padding: 0.75rem;
   margin: 0;
+  min-width: 0; /* fieldsets default to min-content width and would overflow the panel */
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
@@ -248,8 +249,13 @@ tbody tr.active {
   font-variant-numeric: tabular-nums;
 }
 
-.control input[type='range'] {
+.control input[type='range'],
+.control select {
   width: 100%;
+  max-width: 100%;
+}
+
+.control input[type='range'] {
   accent-color: var(--accent);
 }
 
@@ -602,6 +608,36 @@ select {
 
 @media (prefers-reduced-motion: reduce) {
   .live-dot { animation: none; }
+}
+
+/* ---------------------------------------------------------------------------
+   Video mode
+   --------------------------------------------------------------------------- */
+.job-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.job-progress progress {
+  width: 100%;
+  height: 8px;
+  accent-color: var(--accent);
+}
+
+.link-button {
+  font: inherit;
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--accent);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.stat .link-button.stat-note {
+  font-size: 0.75rem;
 }
 
 /* ---------------------------------------------------------------------------

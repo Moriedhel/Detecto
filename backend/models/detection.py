@@ -13,7 +13,16 @@ class PersonDetection(BaseModel):
     center: list[float] = Field(description="[cx, cy]")
     width: float
     height: float
+    track_id: int | None = Field(None, description="Stable ID within a tracking session (session=...)")
+    tracked_s: float | None = Field(None, description="Seconds this track has been visible")
     identity: FaceIdentity | None = Field(None, description="Recognised face inside this box (faces=true)")
+
+
+class TrackingInfo(BaseModel):
+    session_id: str
+    unique_people: int = Field(description="Different track IDs seen in this session")
+    active: int = Field(description="Tracks visible in this frame")
+    fps: float = Field(description="Frame rate the tracker is assuming")
 
 
 class Timings(BaseModel):
@@ -43,6 +52,7 @@ class DetectResponse(BaseModel):
     faces: list[FaceResult] | None = Field(
         None, description="All faces found and who they match (only when faces=true)"
     )
+    tracking: TrackingInfo | None = Field(None, description="Session totals (only with session=...)")
     annotated_image: str | None = Field(
         None, description="JPEG data URL with boxes drawn (when return_image=true)"
     )

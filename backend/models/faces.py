@@ -34,6 +34,9 @@ class FaceIdentity(BaseModel):
     person_id: int | None
     name: str | None
     similarity: float = Field(description="Cosine similarity to the closest enrolled face")
+    from_track: bool = Field(
+        False, description="True when the face isn't visible now but this track was recognised earlier"
+    )
 
 
 class FaceResult(FaceIdentity):

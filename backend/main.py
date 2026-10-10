@@ -15,7 +15,7 @@ from fastapi.responses import JSONResponse
 
 from backend.config import get_settings
 from backend.db import get_repository
-from backend.routes import detect, faces, history, stats
+from backend.routes import detect, faces, history, stats, videos
 from backend.services.detector import get_detector
 from backend.utils.preprocessing import ImageError
 
@@ -92,6 +92,7 @@ app.include_router(detect.router)
 app.include_router(history.router)
 app.include_router(stats.router)
 app.include_router(faces.router)
+app.include_router(videos.router)
 
 
 @app.get("/health", tags=["system"])

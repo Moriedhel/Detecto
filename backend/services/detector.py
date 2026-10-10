@@ -15,6 +15,7 @@ import torch
 from ultralytics import YOLO
 
 from backend.config import Settings, get_settings
+from backend.services.tracking import TrackSession
 from backend.utils.preprocessing import PreprocessResult
 
 logger = logging.getLogger("detecto.detector")
@@ -30,6 +31,19 @@ class Detection:
     center: list[float]  # [cx, cy]
     width: float
     height: float
+    track_id: int | None = None  # set when tracking (stable across frames of a session)
+    tracked_s: float | None = None  # seconds this track has been seen
+
+    @classmethod
+    def from_xyxy(cls, x1, y1, x2, y2, confidence, **extra) -> "Detection":
+        return cls(
+            bbox=[round(float(v), 1) for v in (x1, y1, x2, y2)],
+            confidence=round(float(confidence), 4),
+            center=[round(float((x1 + x2) / 2), 1), round(float((y1 + y2) / 2), 1)],
+            width=round(float(x2 - x1), 1),
+            height=round(float(y2 - y1), 1),
+            **extra,
+        )
 
 
 @dataclass
@@ -86,33 +100,39 @@ class PersonDetector:
             )[0]
 
     def detect(self, pre: PreprocessResult, conf: float | None = None,
-               img_size: int | None = None) -> DetectionResult:
+               img_size: int | None = None, tracker: TrackSession | None = None,
+               t: float | None = None) -> DetectionResult:
         """Run person detection on a preprocessed frame.
 
         `img_size` overrides the model input size for this call (e.g. 640 for
-        faster live frames). Box coordinates are scaled back to the original
-        (pre-resize) image.
+        faster live frames). With a `tracker` session, detections are linked to
+        earlier frames and get stable `track_id`s; `t` is the frame time in
+        seconds (wall clock for live streams, video time for files).
+        Box coordinates are scaled back to the original (pre-resize) image.
         """
         conf = self.settings.conf_threshold if conf is None else conf
+        # When tracking, also keep weak boxes: ByteTrack uses them to continue existing tracks
+        predict_conf = min(conf, self.settings.track_low_conf) if tracker else conf
 
         t0 = time.perf_counter()
-        result = self._predict(pre.image, conf, img_size)
+        result = self._predict(pre.image, predict_conf, img_size)
         total_ms = (time.perf_counter() - t0) * 1000
+        boxes = result.boxes.cpu().numpy()
 
-        boxes = result.boxes
-        xyxy = boxes.xyxy.cpu().numpy() / pre.scale
-        confs = boxes.conf.cpu().numpy()
-
-        detections = []
-        for (x1, y1, x2, y2), c in zip(xyxy, confs):
-            detections.append(Detection(
-                bbox=[round(float(v), 1) for v in (x1, y1, x2, y2)],
-                confidence=round(float(c), 4),
-                center=[round(float((x1 + x2) / 2), 1), round(float((y1 + y2) / 2), 1)],
-                width=round(float(x2 - x1), 1),
-                height=round(float(y2 - y1), 1),
-            ))
-        detections.sort(key=lambda d: d.confidence, reverse=True)
+        if tracker is not None:
+            tracked = tracker.update(boxes, conf, time.time() if t is None else t)
+            detections = [
+                Detection.from_xyxy(*(tb.xyxy / pre.scale), tb.score,
+                                    track_id=tb.track_id, tracked_s=tb.tracked_s)
+                for tb in tracked
+            ]
+            detections.sort(key=lambda d: d.track_id)  # stable order across frames
+            confs = np.array([d.confidence for d in detections])
+        else:
+            xyxy = boxes.xyxy / pre.scale
+            confs = boxes.conf
+            detections = [Detection.from_xyxy(*b, c) for b, c in zip(xyxy, confs)]
+            detections.sort(key=lambda d: d.confidence, reverse=True)
 
         avg = round(float(confs.mean()), 4) if len(confs) else None
         return DetectionResult(

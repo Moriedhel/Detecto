@@ -12,10 +12,11 @@ from datetime import datetime, timezone
 from backend.config import Settings
 from backend.db import DetectionRepository
 from backend.face_store import FaceStore
-from backend.models.detection import DetectResponse, PersonDetection, Timings
+from backend.models.detection import DetectResponse, PersonDetection, Timings, TrackingInfo
 from backend.models.record import DetectionRecordCreate, PersonBox
 from backend.services.detector import PersonDetector
 from backend.services.faces import FaceService, attach_identities
+from backend.services.tracking import TrackSession
 from backend.utils.preprocessing import decode_image, preprocess, validate_bytes
 from backend.utils.visualization import draw_detections, encode_jpeg_base64
 
@@ -24,6 +25,19 @@ logger = logging.getLogger("detecto.pipeline")
 
 def _ms(start: float) -> float:
     return round((time.perf_counter() - start) * 1000, 1)
+
+
+def carry_track_identities(session: TrackSession, detections: list[dict]) -> None:
+    """Remember who each track is, and keep the name while their face is turned away."""
+    for d in detections:
+        tid = d.get("track_id")
+        if tid is None:
+            continue
+        identity = d.get("identity")
+        if identity and identity.get("name"):
+            session.remember_identity(tid, identity)
+        elif tid in session.identities:
+            d["identity"] = {**session.identities[tid], "from_track": True}
 
 
 def run_detection(
@@ -41,12 +55,14 @@ def run_detection(
     save: bool = True,
     face_service: FaceService | None = None,
     face_store: FaceStore | None = None,
+    session: TrackSession | None = None,
 ) -> DetectResponse:
     """Validate, detect, optionally save, and build the API response.
 
     `save=False` skips the history write (e.g. live webcam frames, which the
     client saves selectively). Passing `face_service` + `face_store` also
     recognises enrolled faces; identities are returned but never stored.
+    A tracking `session` gives every person a stable track_id across frames.
     Raises ImageError subclasses for invalid input (mapped to 4xx by main.py).
     """
     t_start = time.perf_counter()
@@ -62,7 +78,7 @@ def run_detection(
 
     conf = settings.conf_threshold if conf is None else conf
     img_size = img_size or settings.img_size
-    result = detector.detect(pre, conf=conf, img_size=img_size)
+    result = detector.detect(pre, conf=conf, img_size=img_size, tracker=session)
     detections = [asdict(d) for d in result.detections]
 
     faces, faces_ms = None, 0.0
@@ -70,7 +86,14 @@ def run_detection(
         t = time.perf_counter()
         faces = face_service.identify(img, face_store.gallery())  # original-resolution image
         attach_identities(detections, faces)
+        if session is not None:
+            carry_track_identities(session, detections)
         faces_ms = _ms(t)
+
+    tracking = None
+    if session is not None:
+        tracking = TrackingInfo(session_id=session.id, unique_people=session.unique_people,
+                                active=len(detections), fps=round(session.fps, 1))
 
     annotated, overlay_ms = None, 0.0
     if return_image:
@@ -126,5 +149,6 @@ def run_detection(
             total_ms=total_ms,
         ),
         faces=faces,
+        tracking=tracking,
         annotated_image=annotated,
     )
