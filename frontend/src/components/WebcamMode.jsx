@@ -11,6 +11,7 @@ import BoxLayer from './BoxLayer'
 import DetectionControls from './DetectionControls'
 import DetectionList from './DetectionList'
 import ErrorBanner from './ErrorBanner'
+import FacePanel from './FacePanel'
 
 export const LIVE_IMG_SIZE = 640 // model input + capture width for live frames (~3x faster than 1280)
 const MIN_FRAME_MS = 100 // cap at ~10 fps to leave CPU for the rest of the machine
@@ -18,12 +19,28 @@ const HIDDEN_POLL_MS = 500 // check interval while the tab is hidden
 
 const sleep = (t) => new Promise((r) => setTimeout(r, t))
 
+// Names recognised in the current frame (or a note that faces are unknown).
+function RecognisedNow({ faces }) {
+  const names = [...new Set(faces.filter((f) => f.name).map((f) => f.name))]
+  const unknown = faces.filter((f) => !f.name).length
+  return (
+    <p className="recognised" role="status" aria-live="polite">
+      {names.length > 0 ? (
+        <>Recognised: {names.map((n) => <strong key={n} className="name-chip">{n}</strong>)}</>
+      ) : (
+        <span className="muted">No enrolled faces in view</span>
+      )}
+      {unknown > 0 && <span className="muted"> · {unknown} unknown {unknown === 1 ? 'face' : 'faces'}</span>}
+    </p>
+  )
+}
+
 // Detection View, webcam mode: live detection on camera frames.
 export default function WebcamMode() {
   const cam = useCamera()
   const displayWidth = useElementWidth(cam.videoRef, cam.status)
 
-  const [settings, setSettings] = useState({ conf: DEFAULT_CONF, enhance: false })
+  const [settings, setSettings] = useState({ conf: DEFAULT_CONF, enhance: false, faces: false })
   const [preset, setPreset] = useState(DEFAULT_SAVE_PRESET)
   const [frame, setFrame] = useState(null) // latest detection result
   const [perf, setPerf] = useState({ fps: null, latency: null })
@@ -70,11 +87,11 @@ export default function WebcamMode() {
       if (!shot) return MIN_FRAME_MS // video has no frame yet
 
       const save = policy.shouldSave(Date.now())
-      const { conf, enhance } = settingsRef.current
+      const { conf, enhance, faces } = settingsRef.current
       controller = new AbortController()
       const res = await detectBase64(
         shot.dataUrl,
-        { source: 'webcam', imgSize: LIVE_IMG_SIZE, returnImage: false, save, conf, enhance },
+        { source: 'webcam', imgSize: LIVE_IMG_SIZE, returnImage: false, save, conf, enhance, faces },
         { signal: controller.signal },
       )
       if (cancelled) return null
@@ -171,6 +188,11 @@ export default function WebcamMode() {
               Live frames are analysed at {LIVE_IMG_SIZE} px for speed. Only selected frames are stored.
             </span>
           </label>
+
+          <FacePanel
+            enabled={settings.faces}
+            onToggle={(faces) => setSettings((s) => ({ ...s, faces }))}
+          />
         </aside>
 
         <div className="result-area">
@@ -191,12 +213,16 @@ export default function WebcamMode() {
                     width={frame.image_width}
                     height={frame.image_height}
                     detections={frame.detections}
+                    faces={frame.faces}
                     hovered={hovered}
                     onHover={setHovered}
                     displayWidth={displayWidth}
                   />
                 )}
               </div>
+              {live && frame?.faces && (
+                <RecognisedNow faces={frame.faces} />
+              )}
               {!live && (
                 <p className="muted camera-off">
                   {cam.status === 'starting' ? 'Waiting for camera permission…' : 'Camera is off.'}
@@ -239,7 +265,12 @@ export default function WebcamMode() {
           {live && frame && (
             <div className="panel">
               <h2>Detected people</h2>
-              <DetectionList detections={frame.detections} hovered={hovered} onHover={setHovered} />
+              <DetectionList
+                detections={frame.detections}
+                hovered={hovered}
+                onHover={setHovered}
+                showIdentity={frame.faces != null}
+              />
             </div>
           )}
         </div>

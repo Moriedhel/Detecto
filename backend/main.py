@@ -15,7 +15,7 @@ from fastapi.responses import JSONResponse
 
 from backend.config import get_settings
 from backend.db import get_repository
-from backend.routes import detect, history, stats
+from backend.routes import detect, faces, history, stats
 from backend.services.detector import get_detector
 from backend.utils.preprocessing import ImageError
 
@@ -91,6 +91,7 @@ async def image_error_handler(request: Request, exc: ImageError):
 app.include_router(detect.router)
 app.include_router(history.router)
 app.include_router(stats.router)
+app.include_router(faces.router)
 
 
 @app.get("/health", tags=["system"])

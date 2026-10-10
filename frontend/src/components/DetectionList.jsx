@@ -1,7 +1,8 @@
 import { confidenceLevel, pct } from '../utils/format'
 
 // Table of detected people. Hovering a row highlights its box (and vice versa).
-export default function DetectionList({ detections, hovered, onHover }) {
+// A "Name" column appears when face recognition results are present.
+export default function DetectionList({ detections, hovered, onHover, showIdentity = false }) {
   if (detections.length === 0) {
     return <p className="muted empty">No people detected at this threshold.</p>
   }
@@ -12,6 +13,7 @@ export default function DetectionList({ detections, hovered, onHover }) {
         <thead>
           <tr>
             <th scope="col">#</th>
+            {showIdentity && <th scope="col">Name</th>}
             <th scope="col">Confidence</th>
             <th scope="col">Size (px)</th>
             <th scope="col">Center (x, y)</th>
@@ -25,6 +27,15 @@ export default function DetectionList({ detections, hovered, onHover }) {
               onMouseEnter={() => onHover(i)}
             >
               <td>{i + 1}</td>
+              {showIdentity && (
+                <td>
+                  {d.identity?.name ? (
+                    <><strong>{d.identity.name}</strong> <span className="muted">{pct(d.identity.similarity)}</span></>
+                  ) : (
+                    <span className="muted">{d.identity ? 'Unknown' : 'No face visible'}</span>
+                  )}
+                </td>
+              )}
               <td>
                 <span className="conf-cell">
                   <span className={`conf-bar conf-${confidenceLevel(d.confidence)}`}>

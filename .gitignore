@@ -11,6 +11,7 @@ plan.md
 # Runtime data & model weights
 backend/data/
 *.pt
+*.onnx
 
 # Frontend
 node_modules/

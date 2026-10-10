@@ -11,9 +11,11 @@ from datetime import datetime, timezone
 
 from backend.config import Settings
 from backend.db import DetectionRepository
+from backend.face_store import FaceStore
 from backend.models.detection import DetectResponse, PersonDetection, Timings
 from backend.models.record import DetectionRecordCreate, PersonBox
 from backend.services.detector import PersonDetector
+from backend.services.faces import FaceService, attach_identities
 from backend.utils.preprocessing import decode_image, preprocess, validate_bytes
 from backend.utils.visualization import draw_detections, encode_jpeg_base64
 
@@ -37,12 +39,15 @@ def run_detection(
     return_image: bool = True,
     img_size: int | None = None,
     save: bool = True,
+    face_service: FaceService | None = None,
+    face_store: FaceStore | None = None,
 ) -> DetectResponse:
     """Validate, detect, optionally save, and build the API response.
 
     `save=False` skips the history write (e.g. live webcam frames, which the
-    client saves selectively). Raises ImageError subclasses for invalid input
-    (mapped to 4xx by main.py).
+    client saves selectively). Passing `face_service` + `face_store` also
+    recognises enrolled faces; identities are returned but never stored.
+    Raises ImageError subclasses for invalid input (mapped to 4xx by main.py).
     """
     t_start = time.perf_counter()
 
@@ -58,6 +63,14 @@ def run_detection(
     conf = settings.conf_threshold if conf is None else conf
     img_size = img_size or settings.img_size
     result = detector.detect(pre, conf=conf, img_size=img_size)
+    detections = [asdict(d) for d in result.detections]
+
+    faces, faces_ms = None, 0.0
+    if face_service is not None and face_store is not None:
+        t = time.perf_counter()
+        faces = face_service.identify(img, face_store.gallery())  # original-resolution image
+        attach_identities(detections, faces)
+        faces_ms = _ms(t)
 
     annotated, overlay_ms = None, 0.0
     if return_image:
@@ -98,7 +111,7 @@ def run_detection(
         img_size=img_size,
         count=result.count,
         avg_confidence=result.avg_confidence,
-        detections=[PersonDetection(**asdict(d)) for d in result.detections],
+        detections=[PersonDetection(**d) for d in detections],
         image_width=width,
         image_height=height,
         conf_threshold=conf,
@@ -108,8 +121,10 @@ def run_detection(
             preprocess_ms=preprocess_ms,
             inference_ms=result.inference_ms,
             detect_ms=result.total_ms,
+            faces_ms=faces_ms,
             overlay_ms=overlay_ms,
             total_ms=total_ms,
         ),
+        faces=faces,
         annotated_image=annotated,
     )

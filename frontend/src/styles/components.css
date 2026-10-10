@@ -605,6 +605,118 @@ select {
 }
 
 /* ---------------------------------------------------------------------------
+   Face recognition (webcam mode)
+   --------------------------------------------------------------------------- */
+.face {
+  --face: #3b82f6; /* identity hue, distinct from the person-box confidence colours */
+}
+
+.face-unknown {
+  --face: #94a3b8;
+}
+
+.face-rect {
+  fill: transparent;
+  stroke: var(--face);
+  stroke-width: 2;
+}
+
+.face-label-bg {
+  fill: var(--face);
+}
+
+.face-label {
+  fill: #ffffff;
+  font-family: var(--font);
+  font-weight: 700;
+  pointer-events: none;
+}
+
+.face-unknown .face-label {
+  fill: #0b0d0f;
+}
+
+.recognised {
+  width: 100%;
+  margin: 0.5rem 0 0;
+  text-align: center;
+}
+
+.name-chip {
+  display: inline-block;
+  margin-left: 0.35rem;
+  padding: 0.05rem 0.5rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, #3b82f6 18%, transparent);
+}
+
+.control-title {
+  display: block;
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 0.25rem;
+}
+
+.people-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.people-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  background: var(--surface-2);
+}
+
+.person-name {
+  font-weight: 600;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.enroll-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  border-top: 1px solid var(--border);
+  padding-top: 0.75rem;
+}
+
+.enroll-form input[type='file'] {
+  font-size: 0.85rem;
+  max-width: 100%;
+}
+
+.face-message {
+  font-size: 0.85rem;
+  padding: 0.5rem 0.6rem;
+  border-radius: 6px;
+}
+
+.face-message.ok {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.face-message.error {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+.face-message ul {
+  margin: 0.3rem 0 0;
+  padding-left: 1.1rem;
+}
+
+/* ---------------------------------------------------------------------------
    History page
    --------------------------------------------------------------------------- */
 .toolbar {

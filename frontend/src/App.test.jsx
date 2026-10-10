@@ -32,7 +32,8 @@ describe('App shell', () => {
     renderAt('/')
     await userEvent.click(screen.getByRole('link', { name: 'History' }))
     // History is lazy-loaded, so its heading appears asynchronously
-    expect(await screen.findByRole('heading', { name: 'History' })).toBeInTheDocument()
+    // (first load compiles the chart library, which can exceed the default 1 s wait)
+    expect(await screen.findByRole('heading', { name: 'History' }, { timeout: 15000 })).toBeInTheDocument()
   })
 
   it('redirects unknown paths to Detection', () => {

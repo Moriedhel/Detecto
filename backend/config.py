@@ -34,6 +34,13 @@ class Settings(BaseSettings):
     # 1280 finds far more small/crowded people than 640 (see backend/evaluation/results.md)
     img_size: int = Field(1280, gt=0)  # inference input size (px)
 
+    # --- Face recognition (OpenCV YuNet detector + SFace embeddings, files in weights_dir) ---
+    face_detector_model: str = "face_detection_yunet_2023mar.onnx"
+    face_recognizer_model: str = "face_recognition_sface_2021dec.onnx"
+    face_det_score: float = 0.8  # minimum face-detection score
+    face_match_threshold: float = 0.363  # SFace cosine similarity for "same person" (OpenCV's value)
+    face_max_photos: int = Field(10, gt=0)  # photos per enrolment request
+
     # --- Preprocessing ---
     max_image_side: int = Field(1280, gt=0)  # larger images are downscaled first
     enhance_contrast: bool = False  # apply CLAHE by default (can be set per request)
@@ -50,7 +57,7 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     log_file: Path | None = BACKEND_DIR / "data" / "detecto.log"  # empty to disable
 
-    @field_validator("conf_threshold", "iou_threshold")
+    @field_validator("conf_threshold", "iou_threshold", "face_det_score", "face_match_threshold")
     @classmethod
     def _between_zero_and_one(cls, v: float) -> float:
         if not 0.0 <= v <= 1.0:

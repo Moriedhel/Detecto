@@ -2,13 +2,14 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { detectBase64 } from '../api'
+import { detectBase64, getPeople } from '../api'
 import DetectionPage from '../pages/DetectionPage'
 import { captureFrame } from '../utils/capture'
 
 vi.mock('../api', async (importOriginal) => ({
   ...(await importOriginal()),
   detectBase64: vi.fn(),
+  getPeople: vi.fn(),
 }))
 // jsdom has no canvas/video pixels: return a fixed fake frame
 vi.mock('../utils/capture', () => ({
@@ -54,6 +55,7 @@ const openWebcam = async (user) => {
 
 beforeEach(() => {
   detectBase64.mockReset()
+  getPeople.mockResolvedValue({ available: true, threshold: 0.363, people: [] })
   captureFrame.mockClear()
   vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined)
 })
@@ -82,6 +84,26 @@ describe('WebcamMode', () => {
     await waitFor(() => expect(detectBase64.mock.calls.length).toBeGreaterThan(2))
     expect(detectBase64.mock.calls.slice(1).every(([, o]) => o.save === false)).toBe(true)
     expect(screen.getByTestId('live-saved')).toHaveTextContent('1')
+  })
+
+  it('sends faces=true once recognition is switched on and shows names', async () => {
+    mockCamera()
+    detectBase64.mockImplementation(async (_img, opts) => frameResult(1, opts.faces ? {
+      detections: [{ bbox: [10, 10, 200, 340], confidence: 0.8, center: [105, 175], width: 190, height: 330,
+        identity: { person_id: 1, name: 'Maria', similarity: 0.7 } }],
+      faces: [{ bbox: [60, 30, 120, 100], score: 0.9, person_id: 1, name: 'Maria', similarity: 0.7 }],
+    } : {}))
+    const user = userEvent.setup()
+    await openWebcam(user)
+    await user.click(screen.getByRole('button', { name: 'Start camera' }))
+    await screen.findByTestId('live-count')
+    expect(detectBase64.mock.calls[0][1].faces).toBe(false)
+
+    await user.click(screen.getByRole('checkbox', { name: 'Recognise enrolled faces' }))
+
+    expect(await screen.findByText('Maria 70%')).toBeInTheDocument() // face label on the video
+    expect(screen.getByText(/Recognised:/)).toHaveTextContent('Recognised: Maria')
+    expect(detectBase64.mock.calls.at(-1)[1].faces).toBe(true)
   })
 
   it('stops the camera and the loop', async () => {

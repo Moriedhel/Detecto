@@ -10,7 +10,7 @@ const LABEL_PX = 12 // label font size on screen, regardless of image scale
  * Only the label size depends on `displayWidth` (rendered CSS px), so labels
  * stay readable at any size.
  */
-export default function BoxLayer({ width, height, detections = [], hovered, onHover, displayWidth = 0 }) {
+export default function BoxLayer({ width, height, detections = [], faces = null, hovered, onHover, displayWidth = 0 }) {
   if (!(width > 0 && height > 0)) return null
 
   const scale = displayWidth > 0 ? width / displayWidth : 1 // source px per screen px
@@ -20,7 +20,8 @@ export default function BoxLayer({ width, height, detections = [], hovered, onHo
 
   const labels = detections.map((d, i) => {
     const [x1, y1] = d.bbox
-    const text = `#${i + 1} ${pct(d.confidence)}`
+    // A recognised face names the person; otherwise number + detection confidence
+    const text = d.identity?.name ? `#${i + 1} ${d.identity.name}` : `#${i + 1} ${pct(d.confidence)}`
     const w = text.length * fontSize * 0.62 + pad * 2
     return {
       text,
@@ -55,6 +56,21 @@ export default function BoxLayer({ width, height, detections = [], hovered, onHo
         return (
           <g key={i} className={boxClass(d, i)} onMouseEnter={() => onHover?.(i)} data-testid="detection-box">
             <rect x={x1} y={y1} width={x2 - x1} height={y2 - y1} className="box-rect" vectorEffect="non-scaling-stroke" />
+          </g>
+        )
+      })}
+      {/* Faces (when recognition is on): thin boxes, name or "Unknown" below the face */}
+      {faces?.map((f, i) => {
+        const [x1, y1, x2, y2] = f.bbox
+        const text = f.name ? `${f.name} ${pct(f.similarity)}` : 'Unknown'
+        const w = text.length * fontSize * 0.62 + pad * 2
+        const lx = Math.max(0, Math.min(x1, width - w))
+        const ly = Math.min(y2, height - labelH)
+        return (
+          <g key={`face-${i}`} className={`face ${f.name ? 'face-known' : 'face-unknown'}`} data-testid="face-box">
+            <rect x={x1} y={y1} width={x2 - x1} height={y2 - y1} className="face-rect" vectorEffect="non-scaling-stroke" />
+            <rect x={lx} y={ly} width={w} height={labelH} className="face-label-bg" />
+            <text x={lx + pad} y={ly + labelH - pad * 1.4} fontSize={fontSize} className="face-label">{text}</text>
           </g>
         )
       })}

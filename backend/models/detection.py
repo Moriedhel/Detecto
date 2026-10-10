@@ -4,6 +4,8 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
+from backend.models.faces import FaceIdentity, FaceResult
+
 
 class PersonDetection(BaseModel):
     bbox: list[float] = Field(description="[x1, y1, x2, y2] in original image pixels")
@@ -11,6 +13,7 @@ class PersonDetection(BaseModel):
     center: list[float] = Field(description="[cx, cy]")
     width: float
     height: float
+    identity: FaceIdentity | None = Field(None, description="Recognised face inside this box (faces=true)")
 
 
 class Timings(BaseModel):
@@ -19,6 +22,7 @@ class Timings(BaseModel):
     preprocess_ms: float
     inference_ms: float  # model forward pass only
     detect_ms: float  # full predict() call incl. letterbox + NMS
+    faces_ms: float = 0.0  # face detection + recognition (faces=true)
     overlay_ms: float
     total_ms: float  # whole request pipeline (decode -> response)
 
@@ -36,6 +40,9 @@ class DetectResponse(BaseModel):
     conf_threshold: float
     contrast_enhanced: bool
     timings: Timings
+    faces: list[FaceResult] | None = Field(
+        None, description="All faces found and who they match (only when faces=true)"
+    )
     annotated_image: str | None = Field(
         None, description="JPEG data URL with boxes drawn (when return_image=true)"
     )

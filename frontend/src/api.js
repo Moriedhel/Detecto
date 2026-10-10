@@ -93,6 +93,7 @@ async function request(path, { method = 'GET', params, body, signal } = {}) {
   }
 
   if (!res.ok) throw await toApiError(res)
+  if (res.status === 204) return null // no content (e.g. DELETE)
 
   try {
     return await res.json()
@@ -102,8 +103,8 @@ async function request(path, { method = 'GET', params, body, signal } = {}) {
 }
 
 // Shared /detect query options
-function detectParams({ conf, enhance, returnImage, imgSize, save } = {}) {
-  return { conf, enhance, return_image: returnImage, img_size: imgSize, save }
+function detectParams({ conf, enhance, returnImage, imgSize, save, faces } = {}) {
+  return { conf, enhance, return_image: returnImage, img_size: imgSize, save, faces }
 }
 
 // Shared /history and export filters
@@ -180,6 +181,30 @@ export function getHourly(
 /** DELETE /reset: { deleted } */
 export function resetHistory({ signal } = {}) {
   return request('reset', { method: 'DELETE', signal })
+}
+
+// --- face recognition ---------------------------------------------------------
+
+/** GET /faces/people: { available, threshold, people: [{ id, name, photos, created_at }] } */
+export function getPeople({ signal } = {}) {
+  return request('faces/people', { signal })
+}
+
+/**
+ * POST /faces/people: enrol a person from photos (only face features are stored).
+ * @returns {Promise<{person, results: {file, ok, reason}[]}>}
+ */
+export function enrollPerson(name, files, { consent }, { signal } = {}) {
+  const form = new FormData()
+  form.append('name', name)
+  form.append('consent', consent ? 'true' : 'false')
+  for (const f of files) form.append('files', f, f.name)
+  return request('faces/people', { method: 'POST', body: form, signal })
+}
+
+/** DELETE /faces/people/{id}: removes the person and all their face data. */
+export function deletePerson(id, { signal } = {}) {
+  return request(`faces/people/${encodeURIComponent(id)}`, { method: 'DELETE', signal })
 }
 
 /** URL for downloading history as CSV with the given filters (use as an <a href>). */
