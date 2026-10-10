@@ -38,8 +38,8 @@ def test_ids_stay_stable_while_a_person_moves(settings):
     for i in range(6):
         out = s.update(boxes((100 + 5 * i, 100, 150 + 5 * i, 250, 0.9)), conf=0.4, t=i / 10)
         ids.append([tb.track_id for tb in out])
-    assert ids[0] == [1]
-    assert all(frame == [1] for frame in ids)
+    assert ids[:2] == [[None], [None]]  # no number until seen for 3 frames (flicker guard)
+    assert all(frame == [1] for frame in ids[2:])
     assert s.unique_people == 1
     assert s.people()[0]["duration_s"] == pytest.approx(0.5)
 
@@ -122,15 +122,18 @@ def _frame(shift=0):
 
 def test_detect_with_session_returns_stable_track_ids(client):
     params = {"session": "api-test-session", "save": False, "return_image": False, "img_size": 640}
-    first = client.post("/detect/base64", json={"image": _frame(0)}, params=params).json()
-    second = client.post("/detect/base64", json={"image": _frame(6)}, params=params).json()
+    frames = [client.post("/detect/base64", json={"image": _frame(3 * i)}, params=params).json()
+              for i in range(5)]
 
-    ids1 = [d["track_id"] for d in first["detections"]]
-    ids2 = [d["track_id"] for d in second["detections"]]
-    assert ids1 and None not in ids1
-    assert set(ids2) <= set(ids1) and len(ids2) >= len(ids1) - 1
-    assert second["tracking"]["session_id"] == "api-test-session"
-    assert second["tracking"]["active"] == len(ids2)
+    first = frames[0]["detections"]
+    assert first and all(d["track_id"] is None and d["pending"] for d in first)  # numbers from frame 3
+
+    ids3 = [d["track_id"] for d in frames[3]["detections"]]
+    ids4 = [d["track_id"] for d in frames[4]["detections"]]
+    assert ids3 and None not in ids3
+    assert set(ids4) <= set(ids3) and len(ids4) >= len(ids3) - 1  # same people keep their numbers
+    assert frames[4]["tracking"]["session_id"] == "api-test-session"
+    assert frames[4]["tracking"]["unique_people"] == len(set(ids3))
 
     assert client.delete("/detect/sessions/api-test-session").status_code == 204
     assert client.delete("/detect/sessions/api-test-session").status_code == 404

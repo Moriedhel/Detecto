@@ -22,7 +22,8 @@ export default function BoxLayer({ width, height, detections = [], faces = null,
     const [x1, y1] = d.bbox
     // Track ID when tracking (stable across frames), else position in the list.
     // A recognised face names the person; otherwise show the detection confidence.
-    const num = d.track_id ?? i + 1
+    // "?" while a new person is still being compared with people who left (ID may change)
+    const num = d.pending ? '?' : d.track_id ?? i + 1
     const text = d.identity?.name ? `#${num} ${d.identity.name}` : `#${num} ${pct(d.confidence)}`
     const w = text.length * fontSize * 0.62 + pad * 2
     return {

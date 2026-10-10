@@ -1,4 +1,4 @@
-"""Background video analysis: detect + track people through an uploaded video.
+﻿"""Background video analysis: detect + track people through an uploaded video.
 
 Jobs run one at a time in a worker thread. The browser polls the job for
 progress and, when done, plays its own copy of the video with the returned
@@ -26,7 +26,7 @@ from backend.models.video import (
     VideoFrame, VideoInfo, VideoJob, VideoOptions, VideoPerson, VideoResult, VideoSummary,
 )
 from backend.services.detector import PersonDetector, get_detector
-from backend.services.tracking import TrackSession
+from backend.services.tracking import TrackSession, optional_face_service
 from backend.utils.preprocessing import preprocess
 
 logger = logging.getLogger("detecto.video")
@@ -80,7 +80,8 @@ def analyse_video(path: Path, options: VideoOptions, settings: Settings, detecto
 
         step = max(1, round(fps / options.sample_fps))
         analysed_fps = fps / step
-        session = TrackSession(f"video-{path.stem}", settings, fps=analysed_fps)
+        session = TrackSession(f"video-{path.stem}", settings, fps=analysed_fps,
+                               face_service=optional_face_service())
 
         frames: list[VideoFrame] = []
         inference: list[float] = []
@@ -99,8 +100,10 @@ def analyse_video(path: Path, options: VideoOptions, settings: Settings, detecto
                 res = detector.detect(preprocess(frame, settings, enhance=options.enhance),
                                       conf=options.conf, img_size=options.img_size, tracker=session, t=t)
                 inference.append(res.inference_ms)
+                # Store the internal key now; it is replaced by the final person number below,
+                # so someone recognised on return shows one number through the whole video
                 frames.append(VideoFrame(t=round(t, 3), boxes=[
-                    [d.track_id, *d.bbox, d.confidence] for d in res.detections
+                    [d.person_key, *d.bbox, d.confidence] for d in res.detections
                 ]))
                 if total > 0:
                     on_progress(min(0.999, (index + 1) / total))
@@ -112,6 +115,9 @@ def analyse_video(path: Path, options: VideoOptions, settings: Settings, detecto
         raise ValueError("No frames could be decoded from this video.")
 
     processing_s = time.perf_counter() - t_start
+    for frame in frames:  # final numbers; 0 = never counted as a person (flicker)
+        for box in frame.boxes:
+            box[0] = session.reid.number_of(int(box[0])) or 0
     duration = duration or frames[-1].t
     counts = [len(f.boxes) for f in frames]
     peak = max(counts)
@@ -120,6 +126,7 @@ def analyse_video(path: Path, options: VideoOptions, settings: Settings, detecto
                         frames_total=total if total > 0 else index, analysed_fps=round(analysed_fps, 2)),
         summary=VideoSummary(
             unique_people=session.unique_people,
+            returns=session.returns,
             peak_people=peak,
             peak_t=frames[counts.index(peak)].t if peak else None,
             avg_people=round(statistics.mean(counts), 2),

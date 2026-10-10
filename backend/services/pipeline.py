@@ -93,7 +93,7 @@ def run_detection(
     tracking = None
     if session is not None:
         tracking = TrackingInfo(session_id=session.id, unique_people=session.unique_people,
-                                active=len(detections), fps=round(session.fps, 1))
+                                returns=session.returns, active=len(detections), fps=round(session.fps, 1))
 
     annotated, overlay_ms = None, 0.0
     if return_image:

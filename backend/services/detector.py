@@ -32,7 +32,10 @@ class Detection:
     width: float
     height: float
     track_id: int | None = None  # set when tracking (stable across frames of a session)
-    tracked_s: float | None = None  # seconds this track has been seen
+    tracked_s: float | None = None  # seconds since this person was first seen
+    reidentified: bool | None = None  # person left earlier and was recognised on return
+    pending: bool | None = None  # no person number yet (track_id is None)
+    person_key: int | None = None  # internal re-ID key (not part of the API response)
 
     @classmethod
     def from_xyxy(cls, x1, y1, x2, y2, confidence, **extra) -> "Detection":
@@ -120,13 +123,15 @@ class PersonDetector:
         boxes = result.boxes.cpu().numpy()
 
         if tracker is not None:
-            tracked = tracker.update(boxes, conf, time.time() if t is None else t)
+            tracked = tracker.update(boxes, conf, time.time() if t is None else t, image=pre.image)
             detections = [
-                Detection.from_xyxy(*(tb.xyxy / pre.scale), tb.score,
-                                    track_id=tb.track_id, tracked_s=tb.tracked_s)
+                Detection.from_xyxy(*(tb.xyxy / pre.scale), tb.score, track_id=tb.track_id,
+                                    tracked_s=tb.tracked_s, reidentified=tb.reidentified,
+                                    pending=tb.pending, person_key=tb.person_key)
                 for tb in tracked
             ]
-            detections.sort(key=lambda d: d.track_id)  # stable order across frames
+            # Stable order across frames: numbered people first, by number
+            detections.sort(key=lambda d: (d.track_id is None, d.track_id or 0))
             confs = np.array([d.confidence for d in detections])
         else:
             xyxy = boxes.xyxy / pre.scale

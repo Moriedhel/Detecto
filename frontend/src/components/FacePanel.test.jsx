@@ -105,6 +105,23 @@ describe('FacePanel', () => {
   })
 })
 
+describe('BoxLayer with tracking', () => {
+  it('shows "#?" while a new person is pending re-identification', () => {
+    const { container } = render(
+      <BoxLayer
+        width={640}
+        height={480}
+        detections={[
+          { bbox: [10, 10, 200, 400], confidence: 0.9, track_id: 3, pending: true },
+          { bbox: [300, 10, 500, 400], confidence: 0.8, track_id: 1, reidentified: true },
+        ]}
+      />,
+    )
+    expect(within(container).getByText('#? 90%')).toBeInTheDocument()
+    expect(within(container).getByText('#1 80%')).toBeInTheDocument()
+  })
+})
+
 describe('BoxLayer with faces', () => {
   it('names recognised people and labels unknown faces', () => {
     const { container } = render(

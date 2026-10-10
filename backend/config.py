@@ -47,6 +47,15 @@ class Settings(BaseSettings):
     track_session_ttl_s: float = Field(60.0, gt=0)  # live sessions are dropped after this long idle
     track_max_sessions: int = Field(20, gt=0)
 
+    # --- Re-identification (same person leaving and coming back, within one session) ---
+    reid_enabled: bool = True
+    reid_window_s: float = Field(300.0, gt=0)  # only match people who left within this time
+    # Clothing colours (HS histograms of torso/legs). 0.85 measured on sample people:
+    # 1.3% of different-person pairs reach it, 4% of same-person variants fall below.
+    reid_color_threshold: float = 0.85
+    reid_color_margin: float = 0.05  # best candidate must beat the runner-up by this much
+    reid_face_threshold: float = 0.363  # SFace cosine; decides alone when both faces are known
+
     # --- Video analysis ---
     max_video_mb: int = Field(200, gt=0)
     max_video_seconds: float = Field(600.0, gt=0)  # longer videos are rejected
@@ -70,7 +79,8 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     log_file: Path | None = BACKEND_DIR / "data" / "detecto.log"  # empty to disable
 
-    @field_validator("conf_threshold", "iou_threshold", "face_det_score", "face_match_threshold", "track_low_conf")
+    @field_validator("conf_threshold", "iou_threshold", "face_det_score", "face_match_threshold", "track_low_conf",
+                     "reid_color_threshold", "reid_color_margin", "reid_face_threshold")
     @classmethod
     def _between_zero_and_one(cls, v: float) -> float:
         if not 0.0 <= v <= 1.0:

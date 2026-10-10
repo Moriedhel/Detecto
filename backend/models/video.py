@@ -31,10 +31,12 @@ class VideoPerson(BaseModel):
     duration_s: float
     frames: int = Field(description="Analysed frames the person was in")
     best_confidence: float
+    returns: int = Field(0, description="Times the person left and was recognised on return")
 
 
 class VideoSummary(BaseModel):
-    unique_people: int = Field(description="Different tracked people (tracks of 3+ frames)")
+    unique_people: int = Field(description="Different tracked people (3+ frames; returns counted once)")
+    returns: int = Field(0, description="Times someone left and was recognised on return")
     peak_people: int
     peak_t: float | None
     avg_people: float
@@ -46,7 +48,10 @@ class VideoSummary(BaseModel):
 
 class VideoFrame(BaseModel):
     t: float = Field(description="Video time in seconds")
-    boxes: list[list[float]] = Field(description="[track_id, x1, y1, x2, y2, confidence] per person")
+    boxes: list[list[float]] = Field(
+        description="[person_number, x1, y1, x2, y2, confidence] per box; number 0 = brief detection "
+                    "that never counted as a person"
+    )
 
 
 class VideoResult(BaseModel):

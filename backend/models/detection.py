@@ -14,13 +14,20 @@ class PersonDetection(BaseModel):
     width: float
     height: float
     track_id: int | None = Field(None, description="Stable ID within a tracking session (session=...)")
-    tracked_s: float | None = Field(None, description="Seconds this track has been visible")
+    tracked_s: float | None = Field(None, description="Seconds since this person was first seen")
+    reidentified: bool | None = Field(
+        None, description="This person left earlier and was recognised on return (same track_id)"
+    )
+    pending: bool | None = Field(
+        None, description="New track still being compared with people who left; track_id may still change"
+    )
     identity: FaceIdentity | None = Field(None, description="Recognised face inside this box (faces=true)")
 
 
 class TrackingInfo(BaseModel):
     session_id: str
-    unique_people: int = Field(description="Different track IDs seen in this session")
+    unique_people: int = Field(description="Different people seen in this session (returns counted once)")
+    returns: int = Field(0, description="Times someone left and was recognised on return")
     active: int = Field(description="Tracks visible in this frame")
     fps: float = Field(description="Frame rate the tracker is assuming")
 

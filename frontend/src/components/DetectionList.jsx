@@ -28,7 +28,10 @@ export default function DetectionList({ detections, hovered, onHover, showIdenti
               className={hovered === i ? 'active' : undefined}
               onMouseEnter={() => onHover(i)}
             >
-              <td>{d.track_id ?? i + 1}</td>
+              <td title={d.pending ? 'Checking whether this is someone who left earlier' : undefined}>
+                {d.pending ? '?' : d.track_id ?? i + 1}
+                {d.reidentified && <span className="tag" title="Left earlier and was recognised on return">returned</span>}
+              </td>
               {showIdentity && (
                 <td>
                   {d.identity?.name ? (

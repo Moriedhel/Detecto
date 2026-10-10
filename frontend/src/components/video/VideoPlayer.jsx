@@ -16,9 +16,15 @@ export function frameIndexAt(frames, t) {
   return lo
 }
 
-/** Analysed frame boxes ([id, x1, y1, x2, y2, conf]) -> BoxLayer detections. */
+/** Analysed frame boxes ([number, x1, y1, x2, y2, conf]) -> BoxLayer detections.
+ *  Number 0 = a brief detection that never counted as a person (shown as "#?"). */
 export const toDetections = (boxes) =>
-  boxes.map(([id, x1, y1, x2, y2, conf]) => ({ track_id: id, bbox: [x1, y1, x2, y2], confidence: conf }))
+  boxes.map(([id, x1, y1, x2, y2, conf]) => ({
+    track_id: id || null,
+    pending: !id,
+    bbox: [x1, y1, x2, y2],
+    confidence: conf,
+  }))
 
 /**
  * The user's own video file playing with the analysed tracks drawn on top.

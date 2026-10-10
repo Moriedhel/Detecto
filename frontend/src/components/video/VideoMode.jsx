@@ -8,13 +8,13 @@ import VideoPlayer from './VideoPlayer'
 import VideoTimeline from './VideoTimeline'
 
 const MAX_VIDEO_MB = Number(import.meta.env.VITE_MAX_VIDEO_MB || 200)
-const VIDEO_EXT = ['mp4', 'm4v', 'webm', 'mov', 'avi', 'mkv']
+const VIDEO_EXT = new Set(['mp4', 'm4v', 'webm', 'mov', 'avi', 'mkv'])
 
 export function validateVideoFile(file) {
   if (!file) return 'No file selected.'
   if (file.size === 0) return `"${file.name}" is empty.`
   const ext = file.name.split('.').pop()?.toLowerCase()
-  if (!file.type.startsWith('video/') && !VIDEO_EXT.includes(ext)) {
+  if (!file.type.startsWith('video/') && !VIDEO_EXT.has(ext)) {
     return `"${file.name}" is not a video. Use MP4, WebM, MOV, AVI or MKV.`
   }
   if (file.size > MAX_VIDEO_MB * 1024 * 1024) {
@@ -182,6 +182,11 @@ export default function VideoMode() {
                 <div className="stat stat-main">
                   <dt>Unique people</dt>
                   <dd data-testid="video-unique">{result.summary.unique_people}</dd>
+                  {result.summary.returns > 0 && (
+                    <div className="stat-note">
+                      {result.summary.returns} {result.summary.returns === 1 ? 'return' : 'returns'} recognised
+                    </div>
+                  )}
                 </div>
                 <div className="stat">
                   <dt>Peak in frame</dt>
@@ -229,7 +234,8 @@ export default function VideoMode() {
                           <th scope="col">ID</th>
                           <th scope="col">First seen</th>
                           <th scope="col">Last seen</th>
-                          <th scope="col">On screen</th>
+                          <th scope="col">Span</th>
+                          <th scope="col">Returns</th>
                           <th scope="col">Best confidence</th>
                           <th scope="col"><span className="visually-hidden">Jump</span></th>
                         </tr>
@@ -245,6 +251,7 @@ export default function VideoMode() {
                             <td className="num">{clock(p.first_t)}</td>
                             <td className="num">{clock(p.last_t)}</td>
                             <td className="num">{duration(p.duration_s)}</td>
+                            <td className="num">{p.returns || '–'}</td>
                             <td className="num">{pct(p.best_confidence)}</td>
                             <td>
                               <button type="button" className="link-button" onClick={() => {
@@ -261,8 +268,10 @@ export default function VideoMode() {
                   </div>
                 )}
                 <p className="hint">
-                  A person who leaves and returns after more than ~3 seconds gets a new ID, and people walking past each
-                  other can swap IDs, so “unique people” is an estimate.
+                  Someone who leaves and comes back is recognised by their face or clothing colours and keeps their ID
+                  (“Span” is first to last sighting). It's an estimate: people dressed alike entering one after another
+                  without a visible face may be counted once, and a returning person who looks different may be counted
+                  twice.
                 </p>
               </section>
             </>

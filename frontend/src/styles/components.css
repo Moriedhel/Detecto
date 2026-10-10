@@ -910,6 +910,17 @@ td.source {
   text-overflow: ellipsis;
 }
 
+.tag {
+  display: inline-block;
+  margin-left: 0.4rem;
+  padding: 0 0.4rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  background: color-mix(in srgb, #3b82f6 16%, transparent);
+  color: var(--text);
+}
+
 td.strong {
   font-weight: 700;
 }

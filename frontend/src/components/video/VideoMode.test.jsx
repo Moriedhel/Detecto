@@ -117,7 +117,10 @@ describe('video helpers', () => {
   })
 
   it('converts compact boxes to detections', () => {
-    expect(toDetections([[4, 1, 2, 3, 4, 0.8]])).toEqual([{ track_id: 4, bbox: [1, 2, 3, 4], confidence: 0.8 }])
+    expect(toDetections([[4, 1, 2, 3, 4, 0.8], [0, 5, 6, 7, 8, 0.5]])).toEqual([
+      { track_id: 4, pending: false, bbox: [1, 2, 3, 4], confidence: 0.8 },
+      { track_id: null, pending: true, bbox: [5, 6, 7, 8], confidence: 0.5 },
+    ])
   })
 
   it('validates video files', () => {

@@ -258,9 +258,14 @@ export default function WebcamMode() {
               </div>
               <div className="stat">
                 <dt>Unique people</dt>
-                <dd data-testid="live-unique" title="Different people tracked since the camera started">
+                <dd data-testid="live-unique" title="Different people since the camera started; someone who leaves and comes back is recognised and counted once">
                   {frame?.tracking ? frame.tracking.unique_people : '–'}
                 </dd>
+                {frame?.tracking?.returns > 0 && (
+                  <div className="stat-note" data-testid="live-returns">
+                    {frame.tracking.returns} {frame.tracking.returns === 1 ? 'return' : 'returns'} recognised
+                  </div>
+                )}
               </div>
               <div className="stat">
                 <dt>Avg confidence</dt>
