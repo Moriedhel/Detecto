@@ -130,6 +130,48 @@ def test_lookalikes_are_not_merged(settings):
     assert reid.returns == 0
 
 
+def _grey_zone_image(box):
+    """Same red top as RED_BLUE, but legs only partly blue: colour similarity in the grey zone
+    (about 0.75: not a match, not clearly different), so the person stays undecided a while."""
+    x1, y1, x2, y2 = box
+    h = y2 - y1
+    img = np.full((480, 640, 3), BG, np.uint8)
+    img[y1:y1 + int(0.55 * h), x1:x2] = RED_BLUE[0]  # torso sample area (20-55 %) fully red
+    img[y1 + int(0.55 * h):y2, x1:x2] = (40, 220, 230)  # yellow legs...
+    img[y1 + int(0.55 * h):y1 + int(0.64 * h), x1:x2] = RED_BLUE[1]  # ...with a blue band
+    return img
+
+
+def test_grey_zone_image_really_is_in_the_grey_zone():
+    a = color_descriptor(person_image([((50, 100, 130, 340), RED_BLUE)]), (50, 100, 130, 340))
+    b = color_descriptor(_grey_zone_image((300, 100, 380, 340)), (300, 100, 380, 340))
+    assert 0.70 <= color_similarity(a, b) < 0.85  # between "clearly different" and "match"
+
+
+def test_grey_zone_person_who_leaves_undecided_is_still_counted(settings):
+    """Regression: a person compared with someone who left, still undecided when they
+    walk out, used to get no number and was never counted."""
+    reid = ReIdentifier(settings)
+    run(reid, visible(1, 50, RED_BLUE, 0) + empty(0.8, 5))
+    box = (300, 100, 380, 340)
+    for i in range(8):  # visible 0.8 s: fewer frames than DECIDE_UNTIL
+        reid.process([(2, np.array(box, float))], _grey_zone_image(box), 6.0 + i * 0.1)
+    assert reid.number_of(reid.raw_to_pid[2]) is None  # still pending while visible
+    run(reid, empty(6.8, 1))  # walks out undecided
+    assert reid.number_of(reid.raw_to_pid[2]) == 2
+    assert len(reid.numbers) == 2 and reid.returns == 0
+
+
+def test_finalize_counts_people_still_pending_at_the_end(settings):
+    reid = ReIdentifier(settings)
+    run(reid, visible(1, 50, RED_BLUE, 0) + empty(0.8, 5))
+    box = (300, 100, 380, 340)
+    for i in range(6):
+        reid.process([(2, np.array(box, float))], _grey_zone_image(box), 6.0 + i * 0.1)
+    reid.finalize()  # e.g. the video ends now
+    assert len(reid.numbers) == 2
+
+
 def test_known_limitation_lookalikes_one_after_another(settings):
     """Documented limit: with colours only (no face), someone dressed exactly like a person
     who just left is indistinguishable from that person returning, so they are merged."""

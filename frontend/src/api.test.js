@@ -29,6 +29,20 @@ const call = (n = 0) => {
 
 // --- URL building -------------------------------------------------------------
 
+describe('buildUrl with a relative API_URL (Docker: nginx proxies /api)', () => {
+  it('resolves against the page origin', async () => {
+    vi.resetModules()
+    vi.doMock('./config', () => ({ API_URL: '/api' }))
+    const { buildUrl: build } = await import('./api')
+    const url = new URL(build('history', { limit: 5 }))
+    expect(url.origin).toBe(window.location.origin)
+    expect(url.pathname).toBe('/api/history')
+    expect(url.searchParams.get('limit')).toBe('5')
+    vi.doUnmock('./config')
+    vi.resetModules()
+  })
+})
+
 describe('buildUrl', () => {
   it('skips empty values and serialises dates and booleans', () => {
     const url = new URL(

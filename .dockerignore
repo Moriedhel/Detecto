@@ -1,0 +1,27 @@
+# Build context for the backend image (project root). Keep it small and free of secrets.
+.git
+.venv
+**/__pycache__
+**/*.pyc
+.pytest_cache
+
+# Local config and data (the container uses env vars and the /data volume)
+.env
+backend/data
+
+# Model weights: only the ones the app uses are sent to the build (if present locally);
+# anything missing is downloaded during the build
+backend/weights/*
+!backend/weights/.gitkeep
+!backend/weights/yolov8n.pt
+!backend/weights/face_detection_yunet_2023mar.onnx
+!backend/weights/face_recognition_sface_2021dec.onnx
+
+# Not needed at runtime
+frontend
+backend/tests
+backend/samples
+backend/evaluation
+plan.md
+brief.md
+*.md

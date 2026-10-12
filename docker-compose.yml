@@ -1,0 +1,37 @@
+# Detecto: backend (FastAPI + YOLOv8, CPU) and frontend (React via nginx).
+#
+#   docker compose up --build        then open http://localhost:8080
+#   docker compose down              stop (data is kept in the "detecto-data" volume)
+#   docker compose down -v           stop and delete all stored data
+#
+# Settings: any DETECTO_* variable from .env.example can be set under backend.environment.
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    image: detecto-backend
+    restart: unless-stopped
+    environment:
+      DETECTO_LOG_LEVEL: INFO
+      # Same-origin through nginx, but allow direct API calls from the dev frontend too
+      DETECTO_CORS_ORIGINS: '["http://localhost:8080","http://localhost:5173","http://127.0.0.1:5173"]'
+    volumes:
+      - detecto-data:/data
+    ports:
+      # API + docs at http://localhost:8000/docs (optional; the UI goes through /api).
+      # Change the host port if 8000 is taken: DETECTO_API_PORT=8001 docker compose up
+      - "${DETECTO_API_PORT:-8000}:8000"
+
+  frontend:
+    build: ./frontend
+    image: detecto-frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "${DETECTO_WEB_PORT:-8080}:80"   # the app: http://localhost:8080
+
+volumes:
+  detecto-data:

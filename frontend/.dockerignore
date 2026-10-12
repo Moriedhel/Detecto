@@ -1,0 +1,6 @@
+node_modules
+dist
+# Local dev config: the image sets VITE_API_URL=/api itself
+.env
+.env.*
+!.env.example

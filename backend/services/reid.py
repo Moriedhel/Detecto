@@ -31,7 +31,7 @@ logger = logging.getLogger("detecto.reid")
 
 COUNT_AFTER = 3  # frames before a track counts as a person (shorter = flicker, never numbered)
 DECIDE_AFTER = 4  # frames of a new track before trying to match it
-DECIDE_UNTIL = 40  # after this many frames without a match the person counts as new
+DECIDE_UNTIL = 15  # after this many frames (~1.5 s) without a match the person counts as new
 CLEARLY_DIFFERENT = 0.15  # colour similarity this far below the threshold -> decide "new" at once
 FACE_WAIT = 12  # frames to wait for a face before deciding "new" on colours alone
 RETURN_MIN_GAP_S = 1.5  # shorter gaps are tracker hiccups (repaired, not counted as a return)
@@ -148,8 +148,25 @@ class ReIdentifier:
         """Update with this frame's (tracker_id, xyxy) rows; returns tracker_id -> person key."""
         active = self._observe_frame(rows, img, t)
         self._decide(rows, active, t)
+        self._finalize(exclude=active)  # people who left while undecided still count
         self._assign_numbers(rows)
         return {raw: self.raw_to_pid[raw] for raw, _ in rows}
+
+    def finalize(self) -> None:
+        """End of stream (e.g. a video): count everyone still undecided as a new person."""
+        self._finalize(exclude=set())
+
+    def _finalize(self, exclude: set[int]) -> None:
+        """Undecided people who are no longer visible were never matched to anyone who left,
+        so they are distinct people: decide them as new and give them a number."""
+        for pid, person in sorted(self.people.items(), key=lambda kv: kv[1].first_t):
+            # Flicker (< COUNT_AFTER frames) stays undecided: never counted, never a match candidate
+            if pid in exclude or person.decided or person.frames < COUNT_AFTER:
+                continue
+            person.decided = True
+            if pid not in self.numbers:
+                self.numbers[pid] = self._next_number
+                self._next_number += 1
 
     def _observe_frame(self, rows, img, t) -> set[int]:
         """Create/update people for this frame's tracks; returns the active person keys."""

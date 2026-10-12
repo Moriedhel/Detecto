@@ -36,7 +36,10 @@ const FALLBACK_MESSAGES = {
 
 /** Build a full URL, skipping null/undefined/'' params and serialising dates and booleans. */
 export function buildUrl(path, params = {}) {
-  const url = new URL(path, API_URL + '/')
+  // API_URL may be absolute (dev: http://127.0.0.1:8000) or relative to the page
+  // (Docker: /api, proxied by nginx), so resolve it against the page origin first
+  const origin = typeof window !== 'undefined' ? window.location.origin : undefined
+  const url = new URL(path, new URL(API_URL + '/', origin))
   for (const [key, value] of Object.entries(params)) {
     if (value === undefined || value === null || value === '') continue
     url.searchParams.set(key, value instanceof Date ? value.toISOString() : String(value))

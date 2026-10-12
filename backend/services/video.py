@@ -115,6 +115,7 @@ def analyse_video(path: Path, options: VideoOptions, settings: Settings, detecto
         raise ValueError("No frames could be decoded from this video.")
 
     processing_s = time.perf_counter() - t_start
+    session.reid.finalize()  # people still being compared when the video ended count as new
     for frame in frames:  # final numbers; 0 = never counted as a person (flicker)
         for box in frame.boxes:
             box[0] = session.reid.number_of(int(box[0])) or 0
